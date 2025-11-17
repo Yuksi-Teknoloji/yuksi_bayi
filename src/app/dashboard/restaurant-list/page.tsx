@@ -1,4 +1,4 @@
-// src/app/dashboards/[role]/dealers/restaurant-list/page.tsx
+// src/app/dashboard/restaurant-list/page.tsx (dealer restoran listesi)
 'use client';
 
 import * as React from 'react';
