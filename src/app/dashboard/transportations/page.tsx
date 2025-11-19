@@ -475,7 +475,7 @@ export default function DealerTransportationsPage() {
                               setStatus((prev) => (prev === b.key ? "" : b.key))
                             }
                             className={[
-                              "flex rounded-md px-1 py-1 text-white shadow text-xs sm:text-sm w-full",
+                              "flex rounded-md px-1 py-1 text-white shadow text-xs sm:text-sm w-full cursor-pointer",
                               b.className,
                               active
                                 ? "ring-2 ring-offset-2 ring-offset-white ring-yellow-300"
@@ -597,7 +597,7 @@ export default function DealerTransportationsPage() {
                 type="button"
                 onClick={() => setSelectedOrderId(o.id)}
                 className={[
-                  "w-[220px] rounded-2xl border px-3 py-2 text-left text-xs shadow-sm",
+                  "w-[220px] h-fit rounded-2xl border px-3 py-2 text-left text-xs shadow-sm",
                   active
                     ? "border-emerald-500 bg-emerald-50"
                     : "border-neutral-200 bg-white hover:bg-neutral-50",
