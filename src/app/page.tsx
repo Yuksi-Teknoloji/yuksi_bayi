@@ -112,7 +112,7 @@ export default function AdminLoginPage() {
       }
 
       if (userRole !== "dealer") {
-        setErr("Bu panele sadece admin erişebilir.");
+        setErr("Bu panele sadece bayi erişebilir.");
         return;
       }
 
