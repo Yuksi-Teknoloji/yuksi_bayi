@@ -46,7 +46,7 @@ function persistToken(token: string, exp?: number) {
   }).catch(() => {});
 }
 
-export default function AdminLoginPage() {
+export default function DealerLoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
