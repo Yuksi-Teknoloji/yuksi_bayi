@@ -1,3 +1,4 @@
+// src/app/dashboards/[role]/dealer/create-load/page.tsx
 'use client';
 
 import * as React from 'react';
@@ -12,17 +13,85 @@ type DeliveryTypeAPI = 'immediate' | 'scheduled';
 
 type ExtraService = { name: string; price: number; serviceId: number };
 
-type ExtraServiceKey = 'extraStop' | 'fragile' | 'carryHelp';
-const EXTRA_CATALOG: Record<ExtraServiceKey, { label: string; price: number; serviceId: number }> = {
-  extraStop: { label: 'Durak Ekleme', price: 100, serviceId: 1 },
-  fragile:   { label: 'Kırılabilir / Özenli Taşıma', price: 50,  serviceId: 2 },
-  carryHelp: { label: 'Taşıma Yardımı', price: 100, serviceId: 3 },
+// --- Extra services DTO (GET /api/admin/extra-services) ---
+type ExtraServiceDTO = {
+  id: string;
+  service_name: string;
+  price: number;
+  carrier_type: string;
+  created_at?: string;
+};
+
+type ExtraServiceUI = {
+  id: string;
+  label: string;
+  price: number;
+  carrierType: string;
+};
+
+// --- City prices DTO (GET /api/admin/city-prices) ---
+type CityPriceDTO = {
+  id: string;
+  route_name: string;
+  country_id: number;
+  state_id: number;
+  city_id: number;
+  courier_price: number;
+  minivan_price: number;
+  panelvan_price: number;
+  kamyonet_price: number;
+  kamyon_price: number;
+};
+
+type CityPriceUI = {
+  id: string;
+  label: string;
+  countryId: number;
+  stateId: number;
+  cityId: number;
+  stateName: string;
+  cityName: string;
+  courier: number;
+  minivan: number;
+  panelvan: number;
+  kamyonet: number;
+  kamyon: number;
+};
+
+// --- Dealer restaurants DTO (GET /api/dealer/restaurants) ---
+type DealerRestaurantDTO = {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  contact_person?: string;
+  address_line1?: string;
+  address_line2?: string;
+  latitude?: number | string;
+  longitude?: number | string;
+  city_name?: string;
+  state_name?: string;
+  country_name?: string;
+};
+
+type DealerRestaurantUI = {
+  id: string;
+  label: string;
+  lat: number;
+  lng: number;
+  address: string;
+  cityName: string;
+  stateName: string;
 };
 
 /* ========= Helpers ========= */
 async function readJson<T = any>(res: Response): Promise<T> {
   const t = await res.text();
-  try { return t ? JSON.parse(t) : (null as any); } catch { return (t as any); }
+  try {
+    return t ? JSON.parse(t) : (null as any);
+  } catch {
+    return t as any;
+  }
 }
 const pickMsg = (d: any, fb: string) =>
   d?.error?.message || d?.message || d?.detail || d?.title || fb;
@@ -38,7 +107,8 @@ function collectErrors(x: any): string {
       else if (it && typeof it === 'object') {
         const loc = Array.isArray((it as any).loc) ? (it as any).loc.join('.') : (it as any).loc ?? '';
         const m = (it as any).msg || (it as any).message || (it as any).detail;
-        if (loc && m) msgs.push(`${loc}: ${m}`); else if (m) msgs.push(String(m));
+        if (loc && m) msgs.push(`${loc}: ${m}`);
+        else if (m) msgs.push(String(m));
       }
     }
   } else if (err && typeof err === 'object') {
@@ -60,14 +130,48 @@ const toNum = (v: unknown) => {
   return Number.isFinite(n) ? n : 0;
 };
 
+// city-prices satırından, seçilen taşıyıcı tipine göre km fiyatını çek
+function pickCityBasePrice(p: CityPriceUI | undefined, carrierType: string): number {
+  if (!p) return 0;
+  switch (carrierType) {
+    case 'courier':
+      return p.courier;
+    case 'minivan':
+      return p.minivan;
+    case 'panelvan':
+      return p.panelvan;
+    case 'truck':
+      // truck için kamyonet fiyatını baz aldım, istersen kamyon yaparsın
+      return p.kamyonet || p.kamyon;
+    default:
+      return 0;
+  }
+}
+
+// Haversine mesafe hesabı (km)
+function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371; // km
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
 /* ========= Page ========= */
 export default function DealerCreateLoadPage() {
   /* --- common state --- */
   const token = React.useMemo(getAuthToken, []);
-  const headers = React.useMemo<HeadersInit>(() => ({
-    Accept: 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  }), [token]);
+  const headers = React.useMemo<HeadersInit>(
+    () => ({
+      Accept: 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    }),
+    [token],
+  );
 
   const [busy, setBusy] = React.useState(false);
   const [okMsg, setOkMsg] = React.useState<string | null>(null);
@@ -78,36 +182,36 @@ export default function DealerCreateLoadPage() {
   const [schedDate, setSchedDate] = React.useState('');
   const [schedTime, setSchedTime] = React.useState('');
 
-  const [carrierType, setCarrierType] = React.useState('courier');     // swagger örneği
-  const [vehicleType, setVehicleType] = React.useState('motorcycle');  // swagger örneği
+  const [carrierType, setCarrierType] = React.useState('courier'); // swagger örneği
+  const [vehicleType, setVehicleType] = React.useState('motorcycle'); // swagger örneği
 
   const [pickupAddress, setPickupAddress] = React.useState('');
-  const [pLat, setPLat] = React.useState<string>('');  // string tut, MapPicker ile set ediliyor
+  const [pLat, setPLat] = React.useState<string>(''); // string tut, MapPicker ile set ediliyor
   const [pLng, setPLng] = React.useState<string>('');
 
   const [dropoffAddress, setDropoffAddress] = React.useState('');
   const [dLat, setDLat] = React.useState<string>('');
   const [dLng, setDLng] = React.useState<string>('');
 
+  const [pickupCityName, setPickupCityName] = React.useState('');
+  const [pickupStateName, setPickupStateName] = React.useState('');
+  const [dropCityName, setDropCityName] = React.useState('');
+  const [dropStateName, setDropStateName] = React.useState('');
+
   const [specialNotes, setSpecialNotes] = React.useState('');
 
   const [coupon, setCoupon] = React.useState('');
   const [couponApplied, setCouponApplied] = React.useState<string | null>(null);
 
-  const [extraFlags, setExtraFlags] = React.useState<Record<ExtraServiceKey, boolean>>({
-    extraStop: false,
-    fragile: false,
-    carryHelp: false,
-  });
+  // --- Ek hizmetler (backend’ten) ---
+  const [extraServices, setExtraServices] = React.useState<ExtraServiceUI[]>([]);
+  const [extrasSelected, setExtrasSelected] = React.useState<Record<string, boolean>>({});
+  const [extrasLoading, setExtrasLoading] = React.useState(false);
 
-  const [basePrice, setBasePrice] = React.useState<number | ''>('');
-  const extrasTotal = React.useMemo(
-    () => (Object.keys(extraFlags) as ExtraServiceKey[])
-      .filter((k) => extraFlags[k])
-      .reduce((s, k) => s + EXTRA_CATALOG[k].price, 0),
-    [extraFlags]
-  );
-  const computedTotal = Number(basePrice || 0) + extrasTotal;
+  // --- City prices (backend’ten) ---
+  const [cityPrices, setCityPrices] = React.useState<CityPriceUI[]>([]);
+  const [cityPricesLoading, setCityPricesLoading] = React.useState(false);
+  const [cityPricesError, setCityPricesError] = React.useState<string | null>(null);
 
   const [paymentMethod, setPaymentMethod] = React.useState<'cash' | 'card' | 'transfer' | ''>('');
 
@@ -115,8 +219,306 @@ export default function DealerCreateLoadPage() {
   const [imageFileIds, setImageFileIds] = React.useState<string[]>([]);
   const [newImageId, setNewImageId] = React.useState('');
 
-  const toggleExtra = (k: ExtraServiceKey) =>
-    setExtraFlags((p) => ({ ...p, [k]: !p[k] }));
+  // --- Dealer restaurants (bayinin restoranları) ---
+  const [restaurants, setRestaurants] = React.useState<DealerRestaurantUI[]>([]);
+  const [restaurantsLoading, setRestaurantsLoading] = React.useState(false);
+  const [restaurantsError, setRestaurantsError] = React.useState<string | null>(null);
+  const [selectedRestaurantId, setSelectedRestaurantId] = React.useState<string>('');
+
+  /* --------- Ek Hizmetler --------- */
+  React.useEffect(() => {
+    let cancelled = false;
+
+    async function loadExtraServices() {
+      setExtrasLoading(true);
+      try {
+        const res = await fetch('/yuksi/admin/extra-services', {
+          cache: 'no-store',
+          headers,
+        });
+        const j: any = await readJson(res);
+        if (!res.ok || j?.success === false) {
+          throw new Error(pickMsg(j, `HTTP ${res.status}`));
+        }
+
+        const list: ExtraServiceDTO[] = Array.isArray(j?.data)
+          ? j.data
+          : Array.isArray(j)
+          ? j
+          : [];
+
+        if (cancelled) return;
+
+        const mapped: ExtraServiceUI[] = list.map((x) => ({
+          id: String(x.id),
+          label: x.service_name,
+          price: Number(x.price) || 0,
+          carrierType: x.carrier_type,
+        }));
+
+        setExtraServices(mapped);
+        setExtrasSelected((prev) => {
+          const next = { ...prev };
+          for (const s of mapped) {
+            if (next[s.id] === undefined) next[s.id] = false;
+          }
+          return next;
+        });
+      } catch (e: any) {
+        if (!cancelled) {
+          setErrMsg((prev) => prev || e?.message || 'Ek hizmetler yüklenemedi.');
+        }
+      } finally {
+        if (!cancelled) setExtrasLoading(false);
+      }
+    }
+
+    loadExtraServices();
+    return () => {
+      cancelled = true;
+    };
+  }, [headers]);
+
+  /* --------- City Prices (şehir bazlı km fiyatı) --------- */
+  React.useEffect(() => {
+    let cancelled = false;
+
+    async function loadCityPrices() {
+      setCityPricesLoading(true);
+      setCityPricesError(null);
+      try {
+        // 1) city-prices listesi
+        const res = await fetch('/yuksi/admin/city-prices', {
+          cache: 'no-store',
+          headers,
+        });
+        const j: any = await readJson(res);
+        if (!res.ok || j?.success === false) {
+          throw new Error(pickMsg(j, `HTTP ${res.status}`));
+        }
+
+        const list: CityPriceDTO[] = Array.isArray(j?.data)
+          ? j.data
+          : Array.isArray(j)
+          ? j
+          : [];
+
+        if (cancelled) return;
+
+        // 2) hangi country/state id'leri var, topla
+        const countryIds = new Set<number>();
+        const stateIds = new Set<number>();
+
+        for (const x of list) {
+          if (Number.isFinite(Number(x.country_id))) countryIds.add(Number(x.country_id));
+          if (Number.isFinite(Number(x.state_id))) stateIds.add(Number(x.state_id));
+        }
+
+        // 3) stateMap: id -> name
+        const stateMap = new Map<number, string>();
+        await Promise.all(
+          Array.from(countryIds).map(async (cid) => {
+            const url = new URL('/yuksi/geo/states', location.origin);
+            url.searchParams.set('country_id', String(cid));
+            url.searchParams.set('limit', '500');
+            url.searchParams.set('offset', '0');
+            const r = await fetch(url.toString(), { cache: 'no-store' });
+            const d = await readJson(r);
+            if (r.ok) {
+              const arr: any[] = Array.isArray(d) ? d : Array.isArray(d?.data) ? d.data : [];
+              for (const s of arr) {
+                const sid = Number(s?.id);
+                const name = String(s?.name ?? '');
+                if (Number.isFinite(sid) && name) stateMap.set(sid, name);
+              }
+            }
+          }),
+        );
+
+        // 4) cityMap: id -> name
+        const cityMap = new Map<number, string>();
+        await Promise.all(
+          Array.from(stateIds).map(async (sid) => {
+            const url = new URL('/yuksi/geo/cities', location.origin);
+            url.searchParams.set('state_id', String(sid));
+            url.searchParams.set('limit', '1000');
+            url.searchParams.set('offset', '0');
+            const r = await fetch(url.toString(), { cache: 'no-store' });
+            const d = await readJson(r);
+            if (r.ok) {
+              const arr: any[] = Array.isArray(d) ? d : Array.isArray(d?.data) ? d.data : [];
+              for (const c of arr) {
+                const cid = Number(c?.id);
+                const name = String(c?.name ?? '');
+                if (Number.isFinite(cid) && name) cityMap.set(cid, name);
+              }
+            }
+          }),
+        );
+
+        if (cancelled) return;
+
+        // 5) UI modeli
+        const mapped: CityPriceUI[] = list.map((x) => ({
+          id: String(x.id),
+          label: String(x.route_name ?? ''),
+          countryId: Number(x.country_id),
+          stateId: Number(x.state_id),
+          cityId: Number(x.city_id),
+          stateName: stateMap.get(Number(x.state_id)) ?? '',
+          cityName: cityMap.get(Number(x.city_id)) ?? '',
+          courier: Number(x.courier_price ?? 0),
+          minivan: Number(x.minivan_price ?? 0),
+          panelvan: Number(x.panelvan_price ?? 0),
+          kamyonet: Number(x.kamyonet_price ?? 0),
+          kamyon: Number(x.kamyon_price ?? 0),
+        }));
+
+        setCityPrices(mapped);
+      } catch (e: any) {
+        if (!cancelled) setCityPricesError(e?.message || 'Şehir fiyatları alınamadı.');
+      } finally {
+        if (!cancelled) setCityPricesLoading(false);
+      }
+    }
+
+    loadCityPrices();
+    return () => {
+      cancelled = true;
+    };
+  }, [headers]);
+
+  /* --------- Dealer Restaurants (bayinin restoran listesi) --------- */
+  React.useEffect(() => {
+    let cancelled = false;
+
+    async function loadRestaurants() {
+      setRestaurantsLoading(true);
+      setRestaurantsError(null);
+      try {
+        const url = new URL('/yuksi/dealer/restaurants', location.origin);
+        url.searchParams.set('limit', '200');
+        url.searchParams.set('offset', '0');
+
+        const res = await fetch(url.toString(), {
+          cache: 'no-store',
+          headers,
+        });
+        const j: any = await readJson(res);
+        if (!res.ok || j?.success === false) {
+          throw new Error(pickMsg(j, `HTTP ${res.status}`));
+        }
+
+        const list: DealerRestaurantDTO[] = Array.isArray(j?.data)
+          ? j.data
+          : Array.isArray(j)
+          ? j
+          : [];
+
+        if (cancelled) return;
+
+        const mapped: DealerRestaurantUI[] = list
+          .map((r) => {
+            const lat = toNum(r.latitude);
+            const lng = toNum(r.longitude);
+            if (!lat || !lng) return null;
+
+            const addressParts = [
+              r.address_line1,
+              r.address_line2,
+              r.city_name,
+              r.state_name,
+              r.country_name,
+            ].filter(Boolean);
+
+            const label =
+              (r.name || '').trim() +
+              (r.city_name ? ` (${String(r.city_name).trim()})` : '');
+
+            return {
+              id: String(r.id),
+              label: label || String(r.id),
+              lat,
+              lng,
+              address: addressParts.join(', '),
+              cityName: String(r.city_name ?? ''),
+              stateName: String(r.state_name ?? ''),
+            } as DealerRestaurantUI;
+          })
+          .filter(Boolean) as DealerRestaurantUI[];
+
+        setRestaurants(mapped);
+      } catch (e: any) {
+        if (!cancelled) {
+          setRestaurantsError(e?.message || 'Restoranlar alınamadı.');
+        }
+      } finally {
+        if (!cancelled) setRestaurantsLoading(false);
+      }
+    }
+
+    loadRestaurants();
+    return () => {
+      cancelled = true;
+    };
+  }, [headers]);
+
+  /* --------- pickup/dropoff → mesafe km --------- */
+  const distanceKm = React.useMemo(() => {
+    if (!pLat || !pLng || !dLat || !dLng) return 0;
+    const lat1 = toNum(pLat);
+    const lon1 = toNum(pLng);
+    const lat2 = toNum(dLat);
+    const lon2 = toNum(dLng);
+    if (
+      !Number.isFinite(lat1) ||
+      !Number.isFinite(lon1) ||
+      !Number.isFinite(lat2) ||
+      !Number.isFinite(lon2)
+    ) {
+      return 0;
+    }
+    return haversineKm(lat1, lon1, lat2, lon2);
+  }, [pLat, pLng, dLat, dLng]);
+
+  /* --------- city + carrierType → km başı fiyat --------- */
+  const baseKmPrice = React.useMemo(() => {
+    if (!cityPrices.length) return 0;
+
+    const city = (dropCityName || pickupCityName || '').toLowerCase().trim();
+    const state = (dropStateName || pickupStateName || '').toLowerCase().trim();
+
+    if (!city || !state) return 0;
+
+    let match: CityPriceUI | undefined = cityPrices.find(
+      (p) => p.cityName.toLowerCase() === city && p.stateName.toLowerCase() === state,
+    );
+
+    if (!match) {
+      match = cityPrices.find((p) => p.cityName.toLowerCase() === city);
+    }
+
+    return pickCityBasePrice(match, carrierType);
+  }, [cityPrices, carrierType, pickupCityName, pickupStateName, dropCityName, dropStateName]);
+
+  /* --------- toplam taban ücret = mesafe x km fiyatı --------- */
+  const basePrice = React.useMemo(() => {
+    if (!distanceKm || !baseKmPrice) return 0;
+    return Math.round(distanceKm * baseKmPrice);
+  }, [distanceKm, baseKmPrice]);
+
+  const extrasTotal = React.useMemo(
+    () =>
+      extraServices
+        .filter((s) => extrasSelected[s.id])
+        .reduce((sum, s) => sum + s.price, 0),
+    [extraServices, extrasSelected],
+  );
+
+  const computedTotal = basePrice + extrasTotal;
+
+  const toggleExtra = (id: string) =>
+    setExtrasSelected((p) => ({ ...p, [id]: !p[id] }));
 
   const applyCoupon = () => {
     if (coupon.trim()) setCouponApplied(coupon.trim());
@@ -130,10 +532,26 @@ export default function DealerCreateLoadPage() {
   const removeImageId = (i: number) =>
     setImageFileIds((p) => p.filter((_, idx) => idx !== i));
 
+  /* --- restoran seçimi -> pickup alanlarını doldur --- */
+  const handleRestaurantChange = (id: string) => {
+    setSelectedRestaurantId(id);
+    if (!id) return;
+
+    const r = restaurants.find((x) => x.id === id);
+    if (!r) return;
+
+    setPickupAddress(r.address);
+    setPLat(String(r.lat));
+    setPLng(String(r.lng));
+    setPickupCityName(r.cityName);
+    setPickupStateName(r.stateName);
+  };
+
   /* --- submit --- */
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    setOkMsg(null); setErrMsg(null);
+    setOkMsg(null);
+    setErrMsg(null);
 
     if (!pickupAddress || !dropoffAddress) {
       setErrMsg('Pickup ve drop-off adreslerini girin.');
@@ -152,19 +570,26 @@ export default function DealerCreateLoadPage() {
       return;
     }
 
-    const extraServices: ExtraService[] = (Object.keys(extraFlags) as ExtraServiceKey[])
-      .filter((k) => extraFlags[k])
-      .map((k) => ({
-        name: EXTRA_CATALOG[k].label,
-        price: EXTRA_CATALOG[k].price,
-        serviceId: EXTRA_CATALOG[k].serviceId,
-      }));
+    // basePrice hiçbir şekilde elle girilmedi; eşleşme yoksa göndermeyelim
+    if (!basePrice || basePrice <= 0) {
+      setErrMsg(
+        'Seçilen şehir/ilçe, taşıyıcı tipi veya mesafe için fiyat hesaplanamadı. Lütfen önce admin panelinden city-prices tanımlayın ve adresleri/konumları kontrol edin.',
+      );
+      return;
+    }
+
+    const selectedExtras = extraServices.filter((s) => extrasSelected[s.id]);
+    const extraServicesPayload: ExtraService[] = selectedExtras.map((s, index) => ({
+      name: s.label,
+      price: s.price,
+      serviceId: index + 1, // backend int istediği için sıralı id
+    }));
 
     const body = {
       // === Swagger’daki alan adları ===
       campaignCode: couponApplied || (coupon.trim() || undefined),
 
-      carrierType,               // "courier"
+      carrierType, // "courier"
       deliveryType: deliveryTypeApi, // "immediate" | "scheduled"
       deliveryDate: deliveryTypeApi === 'scheduled' ? toTRDate(schedDate) : undefined, // "15.11.2025"
       deliveryTime: deliveryTypeApi === 'scheduled' ? toTRTime(schedTime) : undefined, // "14:30"
@@ -175,12 +600,12 @@ export default function DealerCreateLoadPage() {
       pickupAddress: pickupAddress,
       pickupCoordinates: [toNum(pLat), toNum(pLng)] as [number, number],
 
-      extraServices,
+      extraServices: extraServicesPayload,
       extraServicesTotal: extrasTotal,
 
       imageFileIds,
 
-      paymentMethod,             // "cash" | "card" | "transfer"
+      paymentMethod, // "cash" | "card" | "transfer"
       specialNotes,
       totalPrice: computedTotal,
       vehicleType,
@@ -200,14 +625,33 @@ export default function DealerCreateLoadPage() {
 
       setOkMsg(j?.message || 'Yeni yük kaydı oluşturuldu.');
       // reset
-      setDeliveryType('today'); setSchedDate(''); setSchedTime('');
-      setPickupAddress(''); setPLat(''); setPLng('');
-      setDropoffAddress(''); setDLat(''); setDLng('');
-      setSpecialNotes(''); setCoupon(''); setCouponApplied(null);
-      setExtraFlags({ extraStop: false, fragile: false, carryHelp: false });
-      setBasePrice(''); setPaymentMethod('');
-      setImageFileIds([]); setNewImageId('');
-      setCarrierType('courier'); setVehicleType('motorcycle');
+      setDeliveryType('today');
+      setSchedDate('');
+      setSchedTime('');
+      setPickupAddress('');
+      setPLat('');
+      setPLng('');
+      setDropoffAddress('');
+      setDLat('');
+      setDLng('');
+      setPickupCityName('');
+      setPickupStateName('');
+      setDropCityName('');
+      setDropStateName('');
+      setSpecialNotes('');
+      setCoupon('');
+      setCouponApplied(null);
+      setExtrasSelected((prev) => {
+        const next: Record<string, boolean> = {};
+        for (const s of extraServices) next[s.id] = false;
+        return next;
+      });
+      setPaymentMethod('');
+      setImageFileIds([]);
+      setNewImageId('');
+      setCarrierType('courier');
+      setVehicleType('motorcycle');
+      setSelectedRestaurantId('');
     } catch (e: any) {
       setErrMsg(e?.message || 'Kayıt oluşturulamadı.');
     } finally {
@@ -224,18 +668,18 @@ export default function DealerCreateLoadPage() {
       </div>
 
       {okMsg && (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 whitespace-pre-line">
+        <div className="whitespace-pre-line rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
           {okMsg}
         </div>
       )}
       {errMsg && (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 whitespace-pre-line">
+        <div className="whitespace-pre-line rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
           {errMsg}
         </div>
       )}
 
       {/* Gönderim Tipi */}
-      <section className="rounded-2xl border border-neutral-200/70 bg-white p-6 shadow-sm soft-card">
+      <section className="soft-card rounded-2xl border border-neutral-200/70 bg-white p-6 shadow-sm">
         <h2 className="mb-4 text-lg font-semibold">Gönderim Tipi</h2>
         <div className="flex gap-3">
           <button
@@ -289,7 +733,43 @@ export default function DealerCreateLoadPage() {
       </section>
 
       {/* Üst alanlar */}
-      <section className="rounded-2xl border border-neutral-200/70 bg-white p-6 shadow-sm soft-card">
+      <section className="soft-card rounded-2xl border border-neutral-200/70 bg-white p-6 shadow-sm">
+        {/* Restoran seçimi */}
+        <div className="mb-6 rounded-2xl border border-dashed border-indigo-200 bg-indigo-50/60 p-4">
+          <div className="mb-2 text-sm font-semibold text-indigo-900">
+            Restoranlarım için yük oluştur
+          </div>
+          {restaurantsLoading && (
+            <div className="text-xs text-neutral-600">Restoranlar yükleniyor…</div>
+          )}
+          {restaurantsError && (
+            <div className="text-xs text-rose-700">Hata: {restaurantsError}</div>
+          )}
+          {!restaurantsLoading && !restaurantsError && restaurants.length === 0 && (
+            <div className="text-xs text-neutral-600">
+              Bu bayiye bağlı restoran bulunamadı.
+            </div>
+          )}
+          {!restaurantsLoading && !restaurantsError && restaurants.length > 0 && (
+            <select
+              value={selectedRestaurantId}
+              onChange={(e) => handleRestaurantChange(e.target.value)}
+              className="mt-1 w-full rounded-xl border border-indigo-200 bg-white px-3 py-2 text-sm outline-none ring-2 ring-transparent transition focus:ring-indigo-200"
+            >
+              <option value="">Restoran seç (opsiyonel)</option>
+              {restaurants.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.label}
+                </option>
+              ))}
+            </select>
+          )}
+          <p className="mt-1 text-[11px] text-neutral-600">
+            Bir restoran seçtiğinde pickup konumu ve adresi otomatik doldurulur. Drop-off
+            adresini haritadan seçebilirsin.
+          </p>
+        </div>
+
         <div className="grid gap-5 md:grid-cols-2">
           <div>
             <label className="mb-2 block text-sm font-semibold">Taşıyıcı Tipi</label>
@@ -323,22 +803,32 @@ export default function DealerCreateLoadPage() {
         <MapPicker
           label="Pickup Konumu"
           value={
-            pLat && pLng ? { lat: Number(pLat), lng: Number(pLng), address: pickupAddress || undefined } : null
+            pLat && pLng
+              ? { lat: Number(pLat), lng: Number(pLng), address: pickupAddress || undefined }
+              : null
           }
-          onChange={(pos) => {
-            setPLat(String(pos.lat)); setPLng(String(pos.lng));
+          onChange={(pos: any) => {
+            setPLat(String(pos.lat));
+            setPLng(String(pos.lng));
             if (pos.address) setPickupAddress(pos.address);
+            if (pos.cityName) setPickupCityName(String(pos.cityName));
+            if (pos.stateName) setPickupStateName(String(pos.stateName));
           }}
         />
         {/* Dropoff */}
         <MapPicker
           label="Drop-off Konumu"
           value={
-            dLat && dLng ? { lat: Number(dLat), lng: Number(dLng), address: dropoffAddress || undefined } : null
+            dLat && dLng
+              ? { lat: Number(dLat), lng: Number(dLng), address: dropoffAddress || undefined }
+              : null
           }
-          onChange={(pos) => {
-            setDLat(String(pos.lat)); setDLng(String(pos.lng));
+          onChange={(pos: any) => {
+            setDLat(String(pos.lat));
+            setDLng(String(pos.lng));
             if (pos.address) setDropoffAddress(pos.address);
+            if (pos.cityName) setDropCityName(String(pos.cityName));
+            if (pos.stateName) setDropStateName(String(pos.stateName));
           }}
         />
 
@@ -356,7 +846,7 @@ export default function DealerCreateLoadPage() {
       </section>
 
       {/* Alt alanlar */}
-      <section className="rounded-2xl border border-neutral-200/70 bg-white p-6 shadow-sm soft-card">
+      <section className="soft-card rounded-2xl border border-neutral-200/70 bg-white p-6 shadow-sm">
         {/* Kampanya */}
         <div className="mb-6">
           <label className="mb-2 block text-sm font-semibold">Kampanya Kodu</label>
@@ -367,41 +857,87 @@ export default function DealerCreateLoadPage() {
               placeholder="Kod"
               className="w-full bg-neutral-100 px-3 py-2 outline-none"
             />
-            <button type="button" onClick={applyCoupon} className="bg-rose-50 px-4 text-rose-600 hover:bg-rose-100">
+            <button
+              type="button"
+              onClick={applyCoupon}
+              className="bg-rose-50 px-4 text-rose-600 hover:bg-rose-100"
+            >
               Uygula
             </button>
           </div>
-          {couponApplied && <div className="mt-2 text-sm text-emerald-600">“{couponApplied}” uygulandı.</div>}
+          {couponApplied && (
+            <div className="mt-2 text-sm text-emerald-600">“{couponApplied}” uygulandı.</div>
+          )}
         </div>
 
         {/* Ek Hizmetler */}
         <div className="mb-2 text-sm font-semibold">Ek Hizmetler</div>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {(Object.keys(EXTRA_CATALOG) as ExtraServiceKey[]).map((k) => (
-            <label key={k} className="flex cursor-pointer items-center justify-between rounded-xl border border-neutral-200 px-3 py-2 hover:bg-neutral-50">
-              <div className="flex items-center gap-2">
-                <input type="checkbox" checked={extraFlags[k]} onChange={() => toggleExtra(k)} className="h-4 w-4" />
-                <span className="text-sm">{EXTRA_CATALOG[k].label}</span>
-              </div>
-              <span className="text-sm font-semibold">{EXTRA_CATALOG[k].price}₺</span>
-            </label>
-          ))}
-        </div>
+
+        {extrasLoading && (
+          <div className="mb-2 text-sm text-neutral-500">Ek hizmetler yükleniyor…</div>
+        )}
+
+        {!extrasLoading && extraServices.length === 0 && (
+          <div className="mb-4 text-sm text-neutral-500">Tanımlı ek hizmet bulunmuyor.</div>
+        )}
+
+        {extraServices.length > 0 && (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {extraServices.map((s) => (
+              <label
+                key={s.id}
+                className="flex cursor-pointer items-center justify-between rounded-xl border border-neutral-200 px-3 py-2 hover:bg-neutral-50"
+              >
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={!!extrasSelected[s.id]}
+                    onChange={() => toggleExtra(s.id)}
+                    className="h-4 w-4"
+                  />
+                  <span className="text-sm">
+                    {s.label} ({s.carrierType})
+                  </span>
+                </div>
+                <span className="text-sm font-semibold">
+                  {s.price.toFixed(0)}₺
+                </span>
+              </label>
+            ))}
+          </div>
+        )}
 
         <div className="mt-4 grid gap-4 md:grid-cols-3">
           <div>
-            <label className="mb-1 block text-sm font-semibold">Taban Ücret (₺)</label>
-            <input
-              type="number"
-              min={0}
-              value={basePrice}
-              onChange={(e) => setBasePrice(e.target.value === '' ? '' : Math.max(0, Number(e.target.value)))}
-              className="w-full rounded-xl border border-neutral-300 bg-neutral-100 px-3 py-2 outline-none focus:bg-white focus:ring-2 focus:ring-sky-200"
-            />
+            <label className="mb-1 block text-sm font-semibold">
+              Taban Ücret (mesafe × km fiyatı)
+            </label>
+            <div className="w-full rounded-xl border border-neutral-300 bg-neutral-100 px-3 py-2 text-sm text-neutral-900">
+              {cityPricesLoading
+                ? 'Şehir fiyatları yükleniyor…'
+                : basePrice > 0
+                ? `${basePrice}₺` +
+                  (distanceKm && baseKmPrice
+                    ? ` (≈ ${distanceKm.toFixed(1)} km × ${baseKmPrice.toFixed(0)}₺/km)`
+                    : '')
+                : cityPricesError
+                ? `Hata: ${cityPricesError}`
+                : 'Şehir/ilçe, taşıyıcı tipi veya mesafe için fiyat bulunamadı.'}
+            </div>
+            <div className="mt-1 text-xs text-neutral-500">
+              Km başı fiyat admin panelindeki <code>city-prices</code> tablosundan,
+              mesafe ise harita konumları üzerinden otomatik hesaplanır.
+            </div>
           </div>
           <div className="self-end text-sm">
-            <div><span className="font-semibold">Ek Hizmet Toplamı: </span>{extrasTotal}₺</div>
-            <div><span className="font-semibold">Genel Toplam: </span>{computedTotal}₺</div>
+            <div>
+              <span className="font-semibold">Ek Hizmet Toplamı: </span>
+              {extrasTotal}₺
+            </div>
+            <div>
+              <span className="font-semibold">Genel Toplam: </span>
+              {computedTotal}₺
+            </div>
           </div>
         </div>
 
@@ -430,7 +966,11 @@ export default function DealerCreateLoadPage() {
               placeholder="f232f2b8-2e42-46f8-b3b5-d91a62f8b001"
               className="flex-1 rounded-xl border border-neutral-300 bg-neutral-100 px-3 py-2 outline-none focus:bg-white focus:ring-2 focus:ring-sky-200"
             />
-            <button type="button" onClick={addImageId} className="rounded-xl bg-neutral-800 px-3 py-2 text-sm text-white hover:bg-neutral-900">
+            <button
+              type="button"
+              onClick={addImageId}
+              className="rounded-xl bg-neutral-800 px-3 py-2 text-sm text-white hover:bg-neutral-900"
+            >
               Ekle
             </button>
           </div>
