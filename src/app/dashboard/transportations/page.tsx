@@ -364,7 +364,7 @@ export default function DealerTransportationsPage() {
 
       {/* Main content: Map + detail */}
       <section
-        className="rounded-2xl border border-neutral-200/70 bg-white p-4 shadow-sm overflow-auto"
+        className="rounded-2xl border border-neutral-200/70 bg-white p-4 shadow-sm"
         ref={sectionRef}
       >
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between my-3">
