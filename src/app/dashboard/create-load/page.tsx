@@ -130,6 +130,33 @@ const toNum = (v: unknown) => {
   return Number.isFinite(n) ? n : 0;
 };
 
+// Adresi, ilk "Türkiye/Turkey" kelimesine kadar kes ve temizle
+function normalizeAddress(addr: string): string {
+  if (!addr) return '';
+  const lower = addr.toLowerCase();
+  const keys = ['türkiye', 'turkey'];
+
+  let cutIdx = -1;
+  let keyLen = 0;
+
+  for (const k of keys) {
+    const i = lower.indexOf(k);
+    if (i !== -1 && (cutIdx === -1 || i < cutIdx)) {
+      cutIdx = i;
+      keyLen = k.length;
+    }
+  }
+
+  let out = addr;
+  if (cutIdx !== -1) {
+    out = addr.slice(0, cutIdx + keyLen);
+  }
+
+  // Fazla virgül/boşluk temizliği
+  out = out.replace(/\s+,/g, ',').replace(/,+/g, ',').trim();
+  return out;
+}
+
 // city-prices satırından, seçilen taşıyıcı tipine göre km fiyatını çek
 function pickCityBasePrice(p: CityPriceUI | undefined, carrierType: string): number {
   if (!p) return 0;
@@ -146,19 +173,6 @@ function pickCityBasePrice(p: CityPriceUI | undefined, carrierType: string): num
     default:
       return 0;
   }
-}
-
-// Haversine mesafe hesabı (km)
-function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371; // km
-  const toRad = (d: number) => (d * Math.PI) / 180;
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
 }
 
 /* ========= Page ========= */
@@ -224,6 +238,11 @@ export default function DealerCreateLoadPage() {
   const [restaurantsLoading, setRestaurantsLoading] = React.useState(false);
   const [restaurantsError, setRestaurantsError] = React.useState<string | null>(null);
   const [selectedRestaurantId, setSelectedRestaurantId] = React.useState<string>('');
+
+  // --- Mesafe (OSRM ile rota) ---
+  const [distanceKm, setDistanceKm] = React.useState<number>(0);
+  const [distanceLoading, setDistanceLoading] = React.useState(false);
+  const [distanceError, setDistanceError] = React.useState<string | null>(null);
 
   /* --------- Ek Hizmetler --------- */
   React.useEffect(() => {
@@ -463,22 +482,62 @@ export default function DealerCreateLoadPage() {
     };
   }, [headers]);
 
-  /* --------- pickup/dropoff → mesafe km --------- */
-  const distanceKm = React.useMemo(() => {
-    if (!pLat || !pLng || !dLat || !dLng) return 0;
+  /* --------- pickup/dropoff → OSRM ile mesafe km --------- */
+  React.useEffect(() => {
     const lat1 = toNum(pLat);
     const lon1 = toNum(pLng);
     const lat2 = toNum(dLat);
     const lon2 = toNum(dLng);
+
     if (
+      !pLat ||
+      !pLng ||
+      !dLat ||
+      !dLng ||
       !Number.isFinite(lat1) ||
       !Number.isFinite(lon1) ||
       !Number.isFinite(lat2) ||
       !Number.isFinite(lon2)
     ) {
-      return 0;
+      setDistanceKm(0);
+      setDistanceError(null);
+      setDistanceLoading(false);
+      return;
     }
-    return haversineKm(lat1, lon1, lat2, lon2);
+
+    const controller = new AbortController();
+    setDistanceLoading(true);
+    setDistanceError(null);
+
+    async function calcRouteDistance() {
+      try {
+        // NOT: Prod'da bunu kendi backend'inden proxy'lemek daha sağlıklı.
+        const url = `https://router.project-osrm.org/route/v1/driving/${lon1},${lat1};${lon2},${lat2}?overview=false&alternatives=false&steps=false`;
+        const res = await fetch(url, { signal: controller.signal });
+        if (!res.ok) {
+          throw new Error(`OSRM HTTP ${res.status}`);
+        }
+        const j: any = await res.json();
+        const meters = j?.routes?.[0]?.distance;
+        if (!meters && meters !== 0) {
+          throw new Error('OSRM response missing distance');
+        }
+        setDistanceKm(meters / 1000);
+        setDistanceError(null);
+      } catch (e: any) {
+        console.error('OSRM distance error:', e);
+        // Fallback KULLANMIYORUZ: rota yoksa mesafe = 0 ve hata mesajı
+        setDistanceKm(0);
+        setDistanceError('Rota mesafesi hesaplanamadı. Lütfen konumları veya adresleri kontrol edin.');
+      } finally {
+        if (!controller.signal.aborted) {
+          setDistanceLoading(false);
+        }
+      }
+    }
+
+    calcRouteDistance();
+    return () => controller.abort();
   }, [pLat, pLng, dLat, dLng]);
 
   /* --------- city + carrierType → km başı fiyat --------- */
@@ -540,7 +599,7 @@ export default function DealerCreateLoadPage() {
     const r = restaurants.find((x) => x.id === id);
     if (!r) return;
 
-    setPickupAddress(r.address);
+    setPickupAddress(normalizeAddress(r.address));
     setPLat(String(r.lat));
     setPLng(String(r.lng));
     setPickupCityName(r.cityName);
@@ -573,7 +632,9 @@ export default function DealerCreateLoadPage() {
     // basePrice hiçbir şekilde elle girilmedi; eşleşme yoksa göndermeyelim
     if (!basePrice || basePrice <= 0) {
       setErrMsg(
-        'Seçilen şehir/ilçe, taşıyıcı tipi veya mesafe için fiyat hesaplanamadı. Lütfen önce admin panelinden city-prices tanımlayın ve adresleri/konumları kontrol edin.',
+        distanceError
+          ? distanceError
+          : 'Seçilen şehir/ilçe, taşıyıcı tipi veya mesafe için fiyat hesaplanamadı. Lütfen önce admin panelinden city-prices tanımlayın ve adresleri/konumları kontrol edin.',
       );
       return;
     }
@@ -585,6 +646,9 @@ export default function DealerCreateLoadPage() {
       serviceId: index + 1, // backend int istediği için sıralı id
     }));
 
+    const normPickupAddress = normalizeAddress(pickupAddress);
+    const normDropoffAddress = normalizeAddress(dropoffAddress);
+
     const body = {
       // === Swagger’daki alan adları ===
       campaignCode: couponApplied || (coupon.trim() || undefined),
@@ -594,10 +658,10 @@ export default function DealerCreateLoadPage() {
       deliveryDate: deliveryTypeApi === 'scheduled' ? toTRDate(schedDate) : undefined, // "15.11.2025"
       deliveryTime: deliveryTypeApi === 'scheduled' ? toTRTime(schedTime) : undefined, // "14:30"
 
-      dropoffAddress: dropoffAddress,
+      dropoffAddress: normDropoffAddress,
       dropoffCoordinates: [toNum(dLat), toNum(dLng)] as [number, number],
 
-      pickupAddress: pickupAddress,
+      pickupAddress: normPickupAddress,
       pickupCoordinates: [toNum(pLat), toNum(pLng)] as [number, number],
 
       extraServices: extraServicesPayload,
@@ -652,6 +716,8 @@ export default function DealerCreateLoadPage() {
       setCarrierType('courier');
       setVehicleType('motorcycle');
       setSelectedRestaurantId('');
+      setDistanceKm(0);
+      setDistanceError(null);
     } catch (e: any) {
       setErrMsg(e?.message || 'Kayıt oluşturulamadı.');
     } finally {
@@ -664,7 +730,6 @@ export default function DealerCreateLoadPage() {
     <form onSubmit={submit} className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Yeni Yük (Bayi)</h1>
-        <span className="text-xs text-neutral-500">/api/dealer/jobs</span>
       </div>
 
       {okMsg && (
@@ -810,7 +875,7 @@ export default function DealerCreateLoadPage() {
           onChange={(pos: any) => {
             setPLat(String(pos.lat));
             setPLng(String(pos.lng));
-            if (pos.address) setPickupAddress(pos.address);
+            if (pos.address) setPickupAddress(normalizeAddress(pos.address));
             if (pos.cityName) setPickupCityName(String(pos.cityName));
             if (pos.stateName) setPickupStateName(String(pos.stateName));
           }}
@@ -826,7 +891,7 @@ export default function DealerCreateLoadPage() {
           onChange={(pos: any) => {
             setDLat(String(pos.lat));
             setDLng(String(pos.lng));
-            if (pos.address) setDropoffAddress(pos.address);
+            if (pos.address) setDropoffAddress(normalizeAddress(pos.address));
             if (pos.cityName) setDropCityName(String(pos.cityName));
             if (pos.stateName) setDropStateName(String(pos.stateName));
           }}
@@ -913,20 +978,20 @@ export default function DealerCreateLoadPage() {
               Taban Ücret (mesafe × km fiyatı)
             </label>
             <div className="w-full rounded-xl border border-neutral-300 bg-neutral-100 px-3 py-2 text-sm text-neutral-900">
-              {cityPricesLoading
-                ? 'Şehir fiyatları yükleniyor…'
+              {cityPricesLoading || distanceLoading
+                ? 'Şehir fiyatları veya mesafe hesaplanıyor…'
                 : basePrice > 0
                 ? `${basePrice}₺` +
                   (distanceKm && baseKmPrice
                     ? ` (≈ ${distanceKm.toFixed(1)} km × ${baseKmPrice.toFixed(0)}₺/km)`
                     : '')
-                : cityPricesError
-                ? `Hata: ${cityPricesError}`
+                : cityPricesError || distanceError
+                ? `Hata: ${cityPricesError || distanceError}`
                 : 'Şehir/ilçe, taşıyıcı tipi veya mesafe için fiyat bulunamadı.'}
             </div>
             <div className="mt-1 text-xs text-neutral-500">
               Km başı fiyat admin panelindeki <code>city-prices</code> tablosundan,
-              mesafe ise harita konumları üzerinden otomatik hesaplanır.
+              mesafe ise OSRM rota servisi üzerinden otomatik hesaplanır.
             </div>
           </div>
           <div className="self-end text-sm">
