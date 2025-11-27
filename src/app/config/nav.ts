@@ -113,6 +113,7 @@ export const NAV: Record<Role, RawNavGroup[]> = {
       title: "Bayi",
       items: [
         { label: "Ana", path: "dashboard" },
+        { label: "Profil Yönetimi", path: "dashboard/profile" },
         { label: "Siparişler", path: "dashboard/transportations" },
         { label: "Lojistik Takip", path: "dashboard/logistics-tracking" },
         { label: "Canlı Takip", path: "dashboard/follow-live" },
