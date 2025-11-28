@@ -84,6 +84,42 @@ type DealerRestaurantUI = {
   stateName: string;
 };
 
+// --- Commission DTO (GET /api/admin/users/commission) ---
+type CommissionMeDTO = {
+  id: string;
+  userType?: string;
+  name?: string;
+  surname?: string;
+  commissionRate?: number | null;
+  commissionDescription?: string | null;
+  // diğer alanlar önemli değil
+};
+
+type CommissionMeResponse = {
+  success?: boolean;
+  message?: string;
+  data?: CommissionMeDTO;
+};
+
+// --- Vehicle products DTO (GET /yuksi/admin/vehicles) ---
+type VehicleProductDTO = {
+  id: string;
+  productName: string;
+  productCode: string;
+  productTemplate: string; // motorcycle|minivan|panelvan|kamyonet|kamyon
+  vehicleFeatures?: string[];
+  isActive?: boolean;
+};
+
+type VehicleProductUI = {
+  id: string;
+  name: string;
+  code: string;
+  template: string; // motorcycle|minivan|panelvan|kamyonet|kamyon
+};
+
+type JwtPayload = { userId?: string; sub?: string; [k: string]: any };
+
 /* ========= Helpers ========= */
 async function readJson<T = any>(res: Response): Promise<T> {
   const t = await res.text();
@@ -168,10 +204,59 @@ function pickCityBasePrice(p: CityPriceUI | undefined, carrierType: string): num
     case 'panelvan':
       return p.panelvan;
     case 'truck':
-      // truck için kamyonet fiyatını baz aldım, istersen kamyon yaparsın
       return p.kamyonet || p.kamyon;
     default:
       return 0;
+  }
+}
+
+// vehicleTemplate varsa onu kullan, yoksa eski carrierType mantığına dön
+function pickCityBasePriceByTemplate(
+  p: CityPriceUI | undefined,
+  vehicleTemplate: string | undefined,
+  carrierType: string,
+): number {
+  if (!p) return 0;
+
+  if (vehicleTemplate) {
+    switch (vehicleTemplate) {
+      case 'motorcycle':
+        return p.courier;
+      case 'minivan':
+        return p.minivan;
+      case 'panelvan':
+        return p.panelvan;
+      case 'kamyonet':
+        return p.kamyonet;
+      case 'kamyon':
+        return p.kamyon;
+    }
+  }
+
+  return pickCityBasePrice(p, carrierType);
+}
+
+const VEHICLE_TEMPLATE_LABEL: Record<string, string> = {
+  motorcycle: 'Motorsiklet',
+  minivan: 'Minivan',
+  panelvan: 'Panelvan',
+  kamyonet: 'Kamyonet',
+  kamyon: 'Kamyon',
+};
+
+// JWT -> userId (şu an kullanmıyoruz ama dursun)
+function parseUserIdFromToken(tok?: string | null): string | null {
+  if (!tok) return null;
+  const parts = tok.split('.');
+  if (parts.length < 2) return null;
+  try {
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, '=');
+    const json = atob(padded);
+    const payload = JSON.parse(json) as JwtPayload;
+    return (payload.userId || payload.sub || null) ?? null;
+  } catch {
+    return null;
   }
 }
 
@@ -196,11 +281,12 @@ export default function DealerCreateLoadPage() {
   const [schedDate, setSchedDate] = React.useState('');
   const [schedTime, setSchedTime] = React.useState('');
 
-  const [carrierType, setCarrierType] = React.useState('courier'); // swagger örneği
-  const [vehicleType, setVehicleType] = React.useState('motorcycle'); // swagger örneği
+  const [carrierType, setCarrierType] = React.useState('courier');
+  // Seçilen araç ürününün template’i (motorcycle, minivan, …) -> API'de vehicleType
+  const [vehicleType, setVehicleType] = React.useState<string>('motorcycle');
 
   const [pickupAddress, setPickupAddress] = React.useState('');
-  const [pLat, setPLat] = React.useState<string>(''); // string tut, MapPicker ile set ediliyor
+  const [pLat, setPLat] = React.useState<string>('');
   const [pLng, setPLng] = React.useState<string>('');
 
   const [dropoffAddress, setDropoffAddress] = React.useState('');
@@ -222,27 +308,39 @@ export default function DealerCreateLoadPage() {
   const [extrasSelected, setExtrasSelected] = React.useState<Record<string, boolean>>({});
   const [extrasLoading, setExtrasLoading] = React.useState(false);
 
-  // --- City prices (backend’ten) ---
+  // --- City prices ---
   const [cityPrices, setCityPrices] = React.useState<CityPriceUI[]>([]);
   const [cityPricesLoading, setCityPricesLoading] = React.useState(false);
   const [cityPricesError, setCityPricesError] = React.useState<string | null>(null);
 
   const [paymentMethod, setPaymentMethod] = React.useState<'cash' | 'card' | 'transfer' | ''>('');
 
-  // imageFileIds — UUID girilecek (API file upload değil, ID alıyor)
+  // imageFileIds — UUID
   const [imageFileIds, setImageFileIds] = React.useState<string[]>([]);
   const [newImageId, setNewImageId] = React.useState('');
 
-  // --- Dealer restaurants (bayinin restoranları) ---
+  // --- Dealer restaurants ---
   const [restaurants, setRestaurants] = React.useState<DealerRestaurantUI[]>([]);
   const [restaurantsLoading, setRestaurantsLoading] = React.useState(false);
   const [restaurantsError, setRestaurantsError] = React.useState<string | null>(null);
   const [selectedRestaurantId, setSelectedRestaurantId] = React.useState<string>('');
 
-  // --- Mesafe (OSRM ile rota) ---
+  // --- Mesafe (OSRM) ---
   const [distanceKm, setDistanceKm] = React.useState<number>(0);
   const [distanceLoading, setDistanceLoading] = React.useState(false);
   const [distanceError, setDistanceError] = React.useState<string | null>(null);
+
+  // --- Komisyon (admin/users/commission) ---
+  const [commissionRate, setCommissionRate] = React.useState<number | null>(null);
+  const [commissionDescription, setCommissionDescription] = React.useState<string | null>(null);
+  const [commissionLoading, setCommissionLoading] = React.useState(false);
+  const [commissionError, setCommissionError] = React.useState<string | null>(null);
+
+  // --- Vehicle products (admin/vehicles) ---
+  const [vehicleProducts, setVehicleProducts] = React.useState<VehicleProductUI[]>([]);
+  const [vehicleProductsLoading, setVehicleProductsLoading] = React.useState(false);
+  const [vehicleProductsError, setVehicleProductsError] = React.useState<string | null>(null);
+  const [vehicleProductId, setVehicleProductId] = React.useState<string>('');
 
   /* --------- Ek Hizmetler --------- */
   React.useEffect(() => {
@@ -298,7 +396,63 @@ export default function DealerCreateLoadPage() {
     };
   }, [headers]);
 
-  /* --------- City Prices (şehir bazlı km fiyatı) --------- */
+  /* --------- Vehicle Products (Araç ürün listesi) --------- */
+  React.useEffect(() => {
+    let cancelled = false;
+
+    async function loadVehicleProducts() {
+      setVehicleProductsLoading(true);
+      setVehicleProductsError(null);
+      try {
+        const res = await fetch('/yuksi/admin/vehicles', {
+          cache: 'no-store',
+          headers,
+        });
+        const j: any = await readJson(res);
+        if (!res.ok || j?.success === false) {
+          throw new Error(pickMsg(j, `HTTP ${res.status}`));
+        }
+
+        const list: VehicleProductDTO[] = Array.isArray(j?.data)
+          ? j.data
+          : Array.isArray(j)
+          ? j
+          : [];
+
+        if (cancelled) return;
+
+        const mapped: VehicleProductUI[] = list
+          .filter((v) => v.isActive !== false)
+          .map((v) => ({
+            id: String(v.id),
+            name: v.productName,
+            code: v.productCode,
+            template: v.productTemplate,
+          }));
+
+        setVehicleProducts(mapped);
+
+        // İlk gelişte bir tane seçili olsun
+        if (!vehicleProductId && mapped.length) {
+          setVehicleProductId(mapped[0].id);
+          setVehicleType(mapped[0].template);
+        }
+      } catch (e: any) {
+        if (!cancelled) {
+          setVehicleProductsError(e?.message || 'Araç ürünleri alınamadı.');
+        }
+      } finally {
+        if (!cancelled) setVehicleProductsLoading(false);
+      }
+    }
+
+    loadVehicleProducts();
+    return () => {
+      cancelled = true;
+    };
+  }, [headers, vehicleProductId]);
+
+  /* --------- City Prices --------- */
   React.useEffect(() => {
     let cancelled = false;
 
@@ -306,7 +460,6 @@ export default function DealerCreateLoadPage() {
       setCityPricesLoading(true);
       setCityPricesError(null);
       try {
-        // 1) city-prices listesi
         const res = await fetch('/yuksi/admin/city-prices', {
           cache: 'no-store',
           headers,
@@ -324,7 +477,6 @@ export default function DealerCreateLoadPage() {
 
         if (cancelled) return;
 
-        // 2) hangi country/state id'leri var, topla
         const countryIds = new Set<number>();
         const stateIds = new Set<number>();
 
@@ -333,7 +485,6 @@ export default function DealerCreateLoadPage() {
           if (Number.isFinite(Number(x.state_id))) stateIds.add(Number(x.state_id));
         }
 
-        // 3) stateMap: id -> name
         const stateMap = new Map<number, string>();
         await Promise.all(
           Array.from(countryIds).map(async (cid) => {
@@ -354,7 +505,6 @@ export default function DealerCreateLoadPage() {
           }),
         );
 
-        // 4) cityMap: id -> name
         const cityMap = new Map<number, string>();
         await Promise.all(
           Array.from(stateIds).map(async (sid) => {
@@ -377,7 +527,6 @@ export default function DealerCreateLoadPage() {
 
         if (cancelled) return;
 
-        // 5) UI modeli
         const mapped: CityPriceUI[] = list.map((x) => ({
           id: String(x.id),
           label: String(x.route_name ?? ''),
@@ -407,7 +556,7 @@ export default function DealerCreateLoadPage() {
     };
   }, [headers]);
 
-  /* --------- Dealer Restaurants (bayinin restoran listesi) --------- */
+  /* --------- Dealer Restaurants --------- */
   React.useEffect(() => {
     let cancelled = false;
 
@@ -511,7 +660,6 @@ export default function DealerCreateLoadPage() {
 
     async function calcRouteDistance() {
       try {
-        // NOT: Prod'da bunu kendi backend'inden proxy'lemek daha sağlıklı.
         const url = `https://router.project-osrm.org/route/v1/driving/${lon1},${lat1};${lon2},${lat2}?overview=false&alternatives=false&steps=false`;
         const res = await fetch(url, { signal: controller.signal });
         if (!res.ok) {
@@ -526,7 +674,6 @@ export default function DealerCreateLoadPage() {
         setDistanceError(null);
       } catch (e: any) {
         console.error('OSRM distance error:', e);
-        // Fallback KULLANMIYORUZ: rota yoksa mesafe = 0 ve hata mesajı
         setDistanceKm(0);
         setDistanceError('Rota mesafesi hesaplanamadı. Lütfen konumları veya adresleri kontrol edin.');
       } finally {
@@ -539,6 +686,49 @@ export default function DealerCreateLoadPage() {
     calcRouteDistance();
     return () => controller.abort();
   }, [pLat, pLng, dLat, dLng]);
+
+  /* --------- Komisyon oranını çek (yeni endpoint) --------- */
+  React.useEffect(() => {
+    let cancelled = false;
+
+    async function loadCommission() {
+      setCommissionLoading(true);
+      setCommissionError(null);
+      try {
+        const res = await fetch('/yuksi/admin/users/commission', {
+          headers,
+          cache: 'no-store',
+        });
+        const j: CommissionMeResponse | any = await readJson(res);
+        if (!res.ok || j?.success === false) {
+          throw new Error(pickMsg(j, `HTTP ${res.status}`));
+        }
+
+        const d = j?.data as CommissionMeDTO | undefined;
+        if (!d) {
+          throw new Error('Komisyon bilgisi bulunamadı.');
+        }
+
+        if (!cancelled) {
+          const rate = Number(d.commissionRate ?? 0);
+          setCommissionRate(Number.isFinite(rate) ? rate : 0);
+          setCommissionDescription(d.commissionDescription ?? null);
+        }
+      } catch (e: any) {
+        if (!cancelled) {
+          setCommissionRate(null);
+          setCommissionError(e?.message || 'Komisyon oranı getirilemedi.');
+        }
+      } finally {
+        if (!cancelled) setCommissionLoading(false);
+      }
+    }
+
+    loadCommission();
+    return () => {
+      cancelled = true;
+    };
+  }, [headers]);
 
   /* --------- city + carrierType → km başı fiyat --------- */
   const baseKmPrice = React.useMemo(() => {
@@ -557,8 +747,21 @@ export default function DealerCreateLoadPage() {
       match = cityPrices.find((p) => p.cityName.toLowerCase() === city);
     }
 
-    return pickCityBasePrice(match, carrierType);
-  }, [cityPrices, carrierType, pickupCityName, pickupStateName, dropCityName, dropStateName]);
+    const selectedVehicle = vehicleProducts.find((v) => v.id === vehicleProductId);
+    const template = selectedVehicle?.template || vehicleType;
+
+    return pickCityBasePriceByTemplate(match, template, carrierType);
+  }, [
+    cityPrices,
+    carrierType,
+    pickupCityName,
+    pickupStateName,
+    dropCityName,
+    dropStateName,
+    vehicleProducts,
+    vehicleProductId,
+    vehicleType,
+  ]);
 
   /* --------- toplam taban ücret = mesafe x km fiyatı --------- */
   const basePrice = React.useMemo(() => {
@@ -575,6 +778,18 @@ export default function DealerCreateLoadPage() {
   );
 
   const computedTotal = basePrice + extrasTotal;
+
+  // ---- Komisyon hesapları ----
+  const dealerCommission = React.useMemo(() => {
+    if (!commissionRate || commissionRate <= 0 || !computedTotal) return 0;
+    // Örnek: 5000 * 12 / 100 = 600 (bayinin alacağı ödeme)
+    return Math.round((computedTotal * commissionRate) / 100);
+  }, [computedTotal, commissionRate]);
+
+  const carrierPayment = React.useMemo(
+    () => (computedTotal && dealerCommission ? computedTotal - dealerCommission : 0),
+    [computedTotal, dealerCommission],
+  );
 
   const toggleExtra = (id: string) =>
     setExtrasSelected((p) => ({ ...p, [id]: !p[id] }));
@@ -629,7 +844,6 @@ export default function DealerCreateLoadPage() {
       return;
     }
 
-    // basePrice hiçbir şekilde elle girilmedi; eşleşme yoksa göndermeyelim
     if (!basePrice || basePrice <= 0) {
       setErrMsg(
         distanceError
@@ -643,20 +857,19 @@ export default function DealerCreateLoadPage() {
     const extraServicesPayload: ExtraService[] = selectedExtras.map((s, index) => ({
       name: s.label,
       price: s.price,
-      serviceId: index + 1, // backend int istediği için sıralı id
+      serviceId: index + 1,
     }));
 
     const normPickupAddress = normalizeAddress(pickupAddress);
     const normDropoffAddress = normalizeAddress(dropoffAddress);
 
     const body = {
-      // === Swagger’daki alan adları ===
       campaignCode: couponApplied || (coupon.trim() || undefined),
 
-      carrierType, // "courier"
-      deliveryType: deliveryTypeApi, // "immediate" | "scheduled"
-      deliveryDate: deliveryTypeApi === 'scheduled' ? toTRDate(schedDate) : undefined, // "15.11.2025"
-      deliveryTime: deliveryTypeApi === 'scheduled' ? toTRTime(schedTime) : undefined, // "14:30"
+      carrierType,
+      deliveryType: deliveryTypeApi,
+      deliveryDate: deliveryTypeApi === 'scheduled' ? toTRDate(schedDate) : undefined,
+      deliveryTime: deliveryTypeApi === 'scheduled' ? toTRTime(schedTime) : undefined,
 
       dropoffAddress: normDropoffAddress,
       dropoffCoordinates: [toNum(dLat), toNum(dLng)] as [number, number],
@@ -669,10 +882,11 @@ export default function DealerCreateLoadPage() {
 
       imageFileIds,
 
-      paymentMethod, // "cash" | "card" | "transfer"
+      paymentMethod,
       specialNotes,
       totalPrice: computedTotal,
       vehicleType,
+      vehicleProductId: vehicleProductId || undefined,
     };
 
     setBusy(true);
@@ -714,7 +928,8 @@ export default function DealerCreateLoadPage() {
       setImageFileIds([]);
       setNewImageId('');
       setCarrierType('courier');
-      setVehicleType('motorcycle');
+      setVehicleProductId(vehicleProducts[0]?.id ?? '');
+      setVehicleType(vehicleProducts[0]?.template ?? 'motorcycle');
       setSelectedRestaurantId('');
       setDistanceKm(0);
       setDistanceError(null);
@@ -725,7 +940,9 @@ export default function DealerCreateLoadPage() {
     }
   }
 
-  /* --- UI (restaurant/create-load ile aynı desen) --- */
+  /* --- UI --- */
+  const selectedVehicle = vehicleProducts.find((v) => v.id === vehicleProductId);
+
   return (
     <form onSubmit={submit} className="space-y-6">
       <div className="flex items-center justify-between">
@@ -846,21 +1063,40 @@ export default function DealerCreateLoadPage() {
               <option value="courier">Kurye</option>
               <option value="minivan">Minivan</option>
               <option value="panelvan">Panelvan</option>
-              <option value="truck">Kamyonet</option>
+              <option value="truck">Kamyonet/Kamyon</option>
             </select>
           </div>
           <div>
-            <label className="mb-2 block text-sm font-semibold">Araç Tipi</label>
+            <label className="mb-2 block text-sm font-semibold">Araç Ürünü</label>
             <select
-              value={vehicleType}
-              onChange={(e) => setVehicleType(e.target.value)}
+              value={vehicleProductId}
+              onChange={(e) => {
+                const id = e.target.value;
+                setVehicleProductId(id);
+                const v = vehicleProducts.find((vv) => vv.id === id);
+                if (v) setVehicleType(v.template);
+              }}
               className="w-full rounded-xl border border-neutral-300 bg-neutral-100 px-3 py-2 outline-none ring-2 ring-transparent transition focus:bg-white focus:ring-sky-200"
             >
-              <option value="motorcycle">Motosiklet</option>
-              <option value="threewheeler">3 Teker</option>
-              <option value="hatchback">Hatchback</option>
-              <option value="boxvan">Kapalı Kasa</option>
+              <option value="">Seçiniz</option>
+              {vehicleProducts.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.name} ({v.code})
+                </option>
+              ))}
             </select>
+            {vehicleProductsLoading && (
+              <p className="mt-1 text-xs text-neutral-500">Araç ürünleri yükleniyor…</p>
+            )}
+            {vehicleProductsError && (
+              <p className="mt-1 text-xs text-rose-600">{vehicleProductsError}</p>
+            )}
+            {selectedVehicle && (
+              <p className="mt-1 text-xs text-neutral-500">
+                Seçilen şablon:{' '}
+                {VEHICLE_TEMPLATE_LABEL[selectedVehicle.template] ?? selectedVehicle.template}
+              </p>
+            )}
           </div>
         </div>
 
@@ -994,6 +1230,7 @@ export default function DealerCreateLoadPage() {
               mesafe ise OSRM rota servisi üzerinden otomatik hesaplanır.
             </div>
           </div>
+
           <div className="self-end text-sm">
             <div>
               <span className="font-semibold">Ek Hizmet Toplamı: </span>
@@ -1002,6 +1239,38 @@ export default function DealerCreateLoadPage() {
             <div>
               <span className="font-semibold">Genel Toplam: </span>
               {computedTotal}₺
+            </div>
+          </div>
+
+          {/* Komisyon breakdown */}
+          <div className="self-end text-sm">
+            <div className="mb-1">
+              <span className="font-semibold">Komisyon Oranı: </span>
+              {commissionLoading
+                ? 'Yükleniyor…'
+                : commissionRate != null
+                ? `${commissionRate}%`
+                : 'Tanımlı değil'}
+            </div>
+            {commissionError && (
+              <div className="mb-1 text-xs text-rose-700">Hata: {commissionError}</div>
+            )}
+            {commissionDescription && (
+              <div className="mb-1 text-xs text-neutral-500">
+                {commissionDescription}
+              </div>
+            )}
+            <div>
+              <span className="font-semibold">Bayi Komisyonu: </span>
+              {commissionRate != null && commissionRate > 0 && computedTotal > 0
+                ? `${dealerCommission}₺ (toplam ${computedTotal}₺ × ${commissionRate}% – bayinin alacağı ödeme)`
+                : '-'}
+            </div>
+            <div>
+              <span className="font-semibold">Taşıyıcı Ödemesi: </span>
+              {commissionRate != null && commissionRate > 0 && computedTotal > 0
+                ? `${carrierPayment}₺ (taşıyıcının alacağı ödeme)`
+                : '-'}
             </div>
           </div>
         </div>
