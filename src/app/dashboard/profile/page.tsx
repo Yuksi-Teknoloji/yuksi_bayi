@@ -315,16 +315,6 @@ export default function DealerProfilePage() {
                 <EditButton onClick={() => toggle('surname')} active={editing.surname} />
               </Row>
               <Row>
-                <input
-                  className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-800 outline-none disabled:bg-white"
-                  placeholder="Hesap tipi (bireysel / kurumsal)"
-                  value={form.accountType}
-                  onChange={onChange('accountType')}
-                  disabled={!editing.accountType}
-                />
-                <EditButton onClick={() => toggle('accountType')} active={editing.accountType} />
-              </Row>
-              <Row>
                 <textarea
                   rows={3}
                   className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-800 outline-none disabled:bg-white"
@@ -403,40 +393,6 @@ export default function DealerProfilePage() {
                 <EditButton onClick={() => toggle('iban')} active={editing.iban} />
               </Row>
             </Block>
-
-            <Block title="Ülke / İl / İlçe ID">
-              <Row>
-                <input
-                  className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-800 outline-none disabled:bg-white"
-                  placeholder="Country ID"
-                  value={form.countryId}
-                  onChange={onChange('countryId')}
-                  disabled={!editing.countryId}
-                />
-                <EditButton onClick={() => toggle('countryId')} active={editing.countryId} />
-              </Row>
-              <Row>
-                <input
-                  className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-800 outline-none disabled:bg-white"
-                  placeholder="State ID"
-                  value={form.stateId}
-                  onChange={onChange('stateId')}
-                  disabled={!editing.stateId}
-                />
-                <EditButton onClick={() => toggle('stateId')} active={editing.stateId} />
-              </Row>
-              <Row>
-                <input
-                  className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-800 outline-none disabled:bg-white"
-                  placeholder="City ID"
-                  value={form.cityId}
-                  onChange={onChange('cityId')}
-                  disabled={!editing.cityId}
-                />
-                <EditButton onClick={() => toggle('cityId')} active={editing.cityId} />
-              </Row>
-            </Block>
-
             <Block title="Konum">
               <Row>
                 <input
