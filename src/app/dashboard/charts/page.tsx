@@ -181,7 +181,7 @@ export default function Charts() {
       if (!res.ok || j?.success === false)
         throw new Error(pickMsg(j, `HTTP ${res.status}`));
       const list = Array.isArray(j?.data) ? j.data : [];
-      const mapped: CorporateJob[] = list.map((x: any) => ({
+      const mapped: DealerJob[] = list.map((x: any) => ({
         id: String(x?.id),
         totalPrice: x?.totalPrice != null ? Number(x.totalPrice) : undefined,
         commissionRate:
