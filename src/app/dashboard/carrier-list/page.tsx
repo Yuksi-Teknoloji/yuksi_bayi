@@ -2,293 +2,423 @@
 'use client';
 
 import * as React from 'react';
-import { Loader2, RefreshCcw, Search } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import { getAuthToken } from '@/src/utils/auth';
 
-/* ------------------------- Types ------------------------- */
-type RestaurantLite = {
-  id: string;
-  name: string;
-};
+const LiveLeaflet = dynamic(() => import('@/src/components/map/LiveLeaflet'), {
+  ssr: false,
+});
 
-type CourierRow = {
-  id: string;
-  restaurant_id: string;
+/* ========= Types ========= */
+
+type DealerCourierGpsDTO = {
   courier_id: string;
-  assigned_at?: string | null;
-  notes?: string | null;
-  created_at?: string | null;
-  first_name?: string | null;
-  last_name?: string | null;
-  email?: string | null;
-  phone?: string | null;
-  is_active?: boolean | null;
-  courier_name?: string | null;
+  courier_name: string;
+  courier_phone?: string;
+  courier_email?: string;
+  is_deleted?: boolean;
+  is_active?: boolean;
+  latitude?: number | string | null;
+  longitude?: number | string | null;
+  location_updated_at?: string | null;
+  vehicle_type?: string | null;
+  vehicle_capacity?: number | null;
+  state_id?: number | null;
 };
 
-type ApiList<T> = {
+type DealerCourierGpsResponse = {
   success?: boolean;
   message?: string;
-  data?: T[];
-} | T[]; // bazı endpointler direkt dizi dönebiliyor
-
-/* ------------------------- Helpers ------------------------- */
-const readJson = async <T,>(res: Response): Promise<T> => {
-  const t = await res.text();
-  try {
-    return (t ? JSON.parse(t) : null) as unknown as T;
-  } catch {
-    return (null as unknown) as T;
-  }
+  data?: {
+    couriers?: DealerCourierGpsDTO[];
+  };
 };
 
-const apiMsg = (d: any, fb: string) =>
-  d?.message || d?.detail || d?.title || `HTTP ${fb}`;
+/* ========= Helpers ========= */
 
-function authHeaders(): HeadersInit {
-  const token = getAuthToken();
-  const h: Record<string, string> = { Accept: 'application/json' };
-  if (token) h.Authorization = `Bearer ${token}`;
-  return h;
+async function readJson<T = any>(res: Response): Promise<T> {
+  const t = await res.text();
+  try {
+    return t ? JSON.parse(t) : (null as any);
+  } catch {
+    return t as any;
+  }
 }
 
-/* ------------------------- Page ------------------------- */
+const pickMsg = (d: any, fb: string) =>
+  d?.error?.message || d?.message || d?.detail || d?.title || fb;
+
+function collectErrors(x: any): string {
+  const msgs: string[] = [];
+  if (x?.message) msgs.push(String(x.message));
+  if (x?.data?.message) msgs.push(String(x.data.message));
+  const err = x?.errors || x?.error || x?.detail;
+
+  if (Array.isArray(err)) {
+    for (const it of err) {
+      if (typeof it === 'string') msgs.push(it);
+      else if (it && typeof it === 'object') {
+        const loc = Array.isArray((it as any).loc) ? (it as any).loc.join('.') : (it as any).loc ?? '';
+        const m = (it as any).msg || (it as any).message || (it as any).detail;
+        if (loc && m) msgs.push(`${loc}: ${m}`);
+        else if (m) msgs.push(String(m));
+      }
+    }
+  } else if (err && typeof err === 'object') {
+    for (const [k, v] of Object.entries(err)) {
+      if (Array.isArray(v)) (v as any[]).forEach((m) => msgs.push(`${k}: ${m}`));
+      else if (v) msgs.push(`${k}: ${v}`);
+    }
+  }
+  return msgs.join('\n');
+}
+
+const toNum = (v: unknown) => {
+  if (typeof v === 'number') return v;
+  const n = Number(String(v ?? '').replace(',', '.'));
+  return Number.isFinite(n) ? n : NaN;
+};
+
+function formatDateTime(dt?: string | null): string {
+  if (!dt) return '—';
+  const d = new Date(dt);
+  if (Number.isNaN(d.getTime())) return dt;
+  return d.toLocaleString('tr-TR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+}
+
+/* ========= Page ========= */
+
 export default function DealerCarrierListPage() {
-  const [restaurants, setRestaurants] = React.useState<RestaurantLite[]>([]);
-  const [restLoading, setRestLoading] = React.useState(false);
-  const [restErr, setRestErr] = React.useState<string | null>(null);
+  const token = React.useMemo(getAuthToken, []);
+  const headers = React.useMemo<HeadersInit>(
+    () => ({
+      Accept: 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    }),
+    [token],
+  );
 
-  const [restaurantId, setRestaurantId] = React.useState<string>('');
-  const [couriers, setCouriers] = React.useState<CourierRow[]>([]);
-  const [courLoading, setCourLoading] = React.useState(false);
-  const [courErr, setCourErr] = React.useState<string | null>(null);
+  const [couriers, setCouriers] = React.useState<DealerCourierGpsDTO[]>([]);
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const [selectedId, setSelectedId] = React.useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = React.useState<string | null>(null);
+  const [search, setSearch] = React.useState('');
 
-  const [q, setQ] = React.useState<string>('');
-
-  /* ----------- load restaurants (GET /api/dealer/restaurants) ----------- */
-  const loadRestaurants = React.useCallback(async () => {
-    setRestLoading(true);
-    setRestErr(null);
-    try {
-      const res = await fetch('/yuksi/dealer/restaurants?limit=200&offset=0', {
-        headers: authHeaders(),
-        cache: 'no-store',
-      });
-      const j: ApiList<any> = await readJson(res);
-      if (!res.ok) throw new Error(apiMsg(j, String(res.status)));
-      const list: any[] = Array.isArray((j as any)?.data)
-        ? (j as any).data
-        : Array.isArray(j)
-        ? (j as any)
-        : [];
-      const mapped: RestaurantLite[] = list
-        .map((r: any): RestaurantLite => ({
-          id: String(r?.id ?? ''),
-          name: String(r?.name ?? '—'),
-        }))
-        .filter((r: RestaurantLite) => r.id);
-      setRestaurants(mapped);
-
-      // tek restoran varsa otomatik seç
-      if (mapped.length === 1) setRestaurantId(mapped[0].id);
-    } catch (e: any) {
-      setRestErr(e?.message || 'Restoranlar getirilemedi.');
-      setRestaurants([]);
-    } finally {
-      setRestLoading(false);
-    }
-  }, []);
-
+  // GPS verilerini çek + periyodik yenile
   React.useEffect(() => {
-    loadRestaurants();
-  }, [loadRestaurants]);
+    let cancelled = false;
 
-  /* ----------- load couriers (GET /api/dealer/restaurants/{id}/couriers) ----------- */
-  const loadCouriers = React.useCallback(async () => {
-    if (!restaurantId) {
-      setCouriers([]);
-      return;
+    async function load() {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch('/yuksi/dealer/couriers/gps', {
+          cache: 'no-store',
+          headers,
+        });
+        const j: DealerCourierGpsResponse | any = await readJson(res);
+        if (!res.ok || j?.success === false) {
+          throw new Error(collectErrors(j) || pickMsg(j, `HTTP ${res.status}`));
+        }
+
+        const list: DealerCourierGpsDTO[] =
+          (j?.data?.couriers && Array.isArray(j.data.couriers) && j.data.couriers) || [];
+
+        if (cancelled) return;
+
+        setCouriers(list);
+        if (!selectedId && list.length) {
+          setSelectedId(list[0].courier_id);
+        }
+        setLastUpdated(
+          new Date().toLocaleTimeString('tr-TR', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+          }),
+        );
+      } catch (e: any) {
+        if (!cancelled) {
+          setError(e?.message || 'Kurye GPS verileri alınamadı.');
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     }
-    setCourLoading(true);
-    setCourErr(null);
-    try {
-      const res = await fetch(
-        `/yuksi/dealer/restaurants/${restaurantId}/couriers?limit=200&offset=0`,
-        { headers: authHeaders(), cache: 'no-store' }
-      );
-      const j: ApiList<any> = await readJson(res);
-      if (!res.ok) throw new Error(apiMsg(j, String(res.status)));
-      const list: any[] = Array.isArray((j as any)?.data)
-        ? (j as any).data
-        : Array.isArray(j)
-        ? (j as any)
-        : [];
-      const mapped: CourierRow[] = list.map(
-        (m: any): CourierRow => ({
-          id: String(m?.id ?? ''),
-          restaurant_id: String(m?.restaurant_id ?? ''),
-          courier_id: String(m?.courier_id ?? ''),
-          assigned_at: m?.assigned_at ?? null,
-          notes: m?.notes ?? null,
-          created_at: m?.created_at ?? null,
-          first_name: m?.first_name ?? null,
-          last_name: m?.last_name ?? null,
-          email: m?.email ?? null,
-          phone: m?.phone ?? null,
-          is_active: m?.is_active ?? null,
-          courier_name: m?.courier_name ?? null,
-        })
-      );
-      setCouriers(mapped);
-    } catch (e: any) {
-      setCourErr(e?.message || 'Kuryeler getirilemedi.');
-      setCouriers([]);
-    } finally {
-      setCourLoading(false);
-    }
-  }, [restaurantId]);
 
-  React.useEffect(() => {
-    loadCouriers();
-  }, [loadCouriers]);
+    load();
+    const id = setInterval(load, 15_000); // 15 sn’de bir yenile
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [headers, selectedId]);
 
-  /* ----------- filtered ----------- */
-  const filtered = React.useMemo(() => {
-    const s = q.trim().toLowerCase();
-    if (!s) return couriers;
-    return couriers.filter((c: CourierRow) => {
-      const full = `${c.courier_name ?? ''} ${c.first_name ?? ''} ${c.last_name ?? ''} ${c.email ?? ''} ${c.phone ?? ''}`.toLowerCase();
-      return full.includes(s) || c.courier_id.toLowerCase().includes(s);
+  // Filtrelenmiş kurye listesi
+  const filteredCouriers = React.useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return couriers;
+
+    return couriers.filter((c) => {
+      const name = (c.courier_name || '').toLowerCase();
+      const phone = (c.courier_phone || '').toLowerCase();
+      const email = (c.courier_email || '').toLowerCase();
+      return name.includes(q) || phone.includes(q) || email.includes(q);
     });
-  }, [couriers, q]);
+  }, [couriers, search]);
+
+  // Harita marker’ları
+  const markers = React.useMemo(
+    () =>
+      filteredCouriers
+        .map((c) => {
+          const lat = toNum(c.latitude ?? NaN);
+          const lng = toNum(c.longitude ?? NaN);
+          if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+          return {
+            id: c.courier_id,
+            name: c.courier_name || 'İsimsiz Kurye',
+            phone: c.courier_phone || '',
+            lat,
+            lng,
+          };
+        })
+        .filter(Boolean) as {
+        id: string;
+        name: string;
+        phone: string;
+        lat: number;
+        lng: number;
+      }[],
+    [filteredCouriers],
+  );
+
+  const activeCourier = React.useMemo(
+    () => filteredCouriers.find((c) => c.courier_id === selectedId) || null,
+    [filteredCouriers, selectedId],
+  );
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Kurye Listesi</h1>
-          <p className="text-sm text-neutral-600">Bayiye bağlı restoranı seç ve kuryeleri görüntüle.</p>
+          <h1 className="text-2xl font-semibold">Kuryelerim (Canlı Konum)</h1>
+          <p className="mt-1 text-sm text-neutral-600">
+            Bu sayfada bayine bağlı tüm kuryelerin anlık GPS konumlarını harita üzerinde
+            görebilirsin.
+          </p>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={loadRestaurants}
-            className="inline-flex items-center gap-2 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-sm hover:bg-neutral-50"
-          >
-            <RefreshCcw className="h-4 w-4" /> Restoranları Yenile
-          </button>
-          <button
-            onClick={loadCouriers}
-            disabled={!restaurantId}
-            className="inline-flex items-center gap-2 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-sm hover:bg-neutral-50 disabled:opacity-60"
-          >
-            <RefreshCcw className="h-4 w-4" /> Kuryeleri Yenile
-          </button>
+        <div className="text-right text-xs text-neutral-500">
+          <div>
+            Toplam kurye: <b>{couriers.length}</b>
+          </div>
+          {lastUpdated && (
+            <div>
+              Son güncelleme: <b>{lastUpdated}</b>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Restoran seçimi + arama */}
-      <section className="rounded-2xl border border-neutral-200/70 bg-white p-4 shadow-sm">
-        <div className="grid gap-3 sm:grid-cols-[1fr,300px]">
-          <label className="grid gap-1 text-sm">
-            <span>Restoran Seç</span>
-            <select
-              value={restaurantId}
-              onChange={(e) => setRestaurantId(e.target.value)}
-              className="rounded-lg border border-neutral-300 bg-white px-3 py-2"
-            >
-              <option value="" disabled>
-                {restLoading ? 'Yükleniyor…' : '— restoran seçin —'}
-              </option>
-              {restaurants.map((r: RestaurantLite) => (
-                <option key={r.id} value={r.id}>
-                  {r.name} ({r.id})
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <div className="relative">
-            <input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Kurye ara… (ad, e-posta, telefon, id)"
-              className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 pl-8 text-sm outline-none focus:ring-2 focus:ring-sky-200"
-            />
-            <Search className="pointer-events-none absolute left-2 top-2 h-4 w-4 text-neutral-400" />
-          </div>
+      {error && (
+        <div className="whitespace-pre-line rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          {error}
         </div>
+      )}
 
-        {restErr && (
-          <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
-            {restErr}
-          </div>
-        )}
-      </section>
+      <section className="soft-card rounded-2xl border border-neutral-200/70 bg-white p-6 shadow-sm">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1.6fr)]">
+          {/* Kurye listesi */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex-1">
+                <label className="mb-1 block text-sm font-semibold text-neutral-800">
+                  Kurye Listesi
+                </label>
+                <input
+                  type="search"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="İsim, telefon veya e-posta ile ara…"
+                  className="w-full rounded-xl border border-neutral-300 bg-neutral-100 px-3 py-2 text-sm outline-none ring-2 ring-transparent transition focus:bg-white focus:ring-sky-200"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  // küçük manual refresh
+                  setLastUpdated(null);
+                  setError(null);
+                  // yeniden tetiklemek için selectedId dependency'sini kullanmayalım,
+                  // bunun yerine çok basit: headers değişmediği için sadece
+                  // aynı effect’i tetikleyemiyoruz; o yüzden burada window.location.reload
+                  // yerine lightweight fetch yapalım:
+                  (async () => {
+                    try {
+                      setLoading(true);
+                      const res = await fetch('/yuksi/dealer/couriers/gps', {
+                        cache: 'no-store',
+                        headers,
+                      });
+                      const j: DealerCourierGpsResponse | any = await readJson(res);
+                      if (!res.ok || j?.success === false) {
+                        throw new Error(collectErrors(j) || pickMsg(j, `HTTP ${res.status}`));
+                      }
+                      const list: DealerCourierGpsDTO[] =
+                        (j?.data?.couriers &&
+                          Array.isArray(j.data.couriers) &&
+                          j.data.couriers) ||
+                        [];
+                      setCouriers(list);
+                      if (!selectedId && list.length) {
+                        setSelectedId(list[0].courier_id);
+                      }
+                      setLastUpdated(
+                        new Date().toLocaleTimeString('tr-TR', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          second: '2-digit',
+                        }),
+                      );
+                    } catch (e: any) {
+                      setError(e?.message || 'Kurye GPS verileri alınamadı.');
+                    } finally {
+                      setLoading(false);
+                    }
+                  })();
+                }}
+                disabled={loading}
+                className="mt-7 rounded-xl bg-neutral-900 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-neutral-800 disabled:opacity-60"
+              >
+                {loading ? 'Yenileniyor…' : 'Tekrar Yükle'}
+              </button>
+            </div>
 
-      {/* Kurye tablosu */}
-      <section className="rounded-2xl border border-neutral-200/70 bg-white shadow-sm">
-        <div className="max-h-[560px] overflow-auto">
-          <table className="min-w-full">
-            <thead>
-              <tr className="text-left text-xs text-neutral-500">
-                <th className="px-4 py-2">Kurye</th>
-                <th className="px-4 py-2">İletişim</th>
-                <th className="px-4 py-2">Durum</th>
-                <th className="px-4 py-2">Atanma</th>
-                <th className="px-4 py-2">ID’ler</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((c: CourierRow) => (
-                <tr key={c.id} className="border-t text-sm">
-                  <td className="px-4 py-2">
-                    <div className="font-medium">{c.courier_name || `${c.first_name ?? ''} ${c.last_name ?? ''}`.trim() || '—'}</div>
-                    <div className="text-[11px] text-neutral-500">{c.id}</div>
-                  </td>
-                  <td className="px-4 py-2">
-                    <div>{c.email || '—'}</div>
-                    <div className="text-[12px] text-neutral-500">{c.phone || '—'}</div>
-                  </td>
-                  <td className="px-4 py-2">
-                    <span
-                      className={`rounded-md px-2 py-0.5 text-xs ${
-                        c.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-neutral-100 text-neutral-600'
-                      }`}
-                    >
-                      {c.is_active ? 'aktif' : 'pasif'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2">
-                    <div className="text-[12px]">{c.assigned_at || '—'}</div>
-                    {c.notes ? <div className="text-[11px] text-neutral-500">{c.notes}</div> : null}
-                  </td>
-                  <td className="px-4 py-2 text-[12px] text-neutral-600">
-                    <div>restaurant_id: <span className="text-neutral-800">{c.restaurant_id}</span></div>
-                    <div>courier_id: <span className="text-neutral-800">{c.courier_id}</span></div>
-                  </td>
-                </tr>
-              ))}
-              {filtered.length === 0 && !courLoading && (
-                <tr>
-                  <td colSpan={5} className="px-4 py-6 text-center text-sm text-neutral-500">
-                    {restaurantId ? 'Kayıt bulunamadı.' : 'Önce restoran seçin.'}
-                  </td>
-                </tr>
+            <div className="max-h-[420px] space-y-2 overflow-y-auto pr-1 text-sm">
+              {loading && couriers.length === 0 && (
+                <div className="rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs text-neutral-600">
+                  Kuryeler yükleniyor…
+                </div>
               )}
-            </tbody>
-          </table>
-        </div>
 
-        {courLoading && (
-          <div className="flex items-center gap-2 px-4 py-2 text-xs text-neutral-500">
-            <Loader2 className="h-4 w-4 animate-spin" /> Yükleniyor…
+              {!loading && filteredCouriers.length === 0 && (
+                <div className="rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs text-neutral-600">
+                  Kriterlere uygun kurye bulunamadı.
+                </div>
+              )}
+
+              {filteredCouriers.map((c) => {
+                const lat = toNum(c.latitude ?? NaN);
+                const lng = toNum(c.longitude ?? NaN);
+                const hasLocation = Number.isFinite(lat) && Number.isFinite(lng);
+                const active = selectedId === c.courier_id;
+
+                return (
+                  <button
+                    key={c.courier_id}
+                    type="button"
+                    onClick={() => setSelectedId(c.courier_id)}
+                    className={[
+                      'w-full rounded-xl border px-3 py-2 text-left transition',
+                      active
+                        ? 'border-sky-400 bg-sky-50/80'
+                        : 'border-neutral-200 bg-white hover:bg-neutral-50',
+                    ].join(' ')}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="font-semibold text-[13px]">
+                        {c.courier_name || 'İsimsiz Kurye'}
+                      </div>
+                      <div className="flex items-center gap-1 text-[11px]">
+                        <span
+                          className={[
+                            'inline-flex items-center rounded-full px-2 py-[2px]',
+                            c.is_active
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              : 'bg-neutral-100 text-neutral-600 border border-neutral-200',
+                          ].join(' ')}
+                        >
+                          <span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-current" />
+                          {c.is_active ? 'Aktif' : 'Pasif'}
+                        </span>
+                        <span
+                          className={[
+                            'inline-flex items-center rounded-full border px-2 py-[2px] text-[11px]',
+                            hasLocation
+                              ? 'bg-sky-50 text-sky-700 border-sky-200'
+                              : 'bg-neutral-50 text-neutral-500 border-neutral-200',
+                          ].join(' ')}
+                        >
+                          {hasLocation ? 'Konum var' : 'Konum yok'}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="mt-1 text-[12px] text-neutral-700">
+                      {c.courier_phone && <div>📞 {c.courier_phone}</div>}
+                      {c.courier_email && <div>✉️ {c.courier_email}</div>}
+                    </div>
+                    {c.location_updated_at && (
+                      <div className="mt-1 text-[11px] text-neutral-500">
+                        Son konum güncellemesi: {formatDateTime(c.location_updated_at)}
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        )}
-        {courErr && (
-          <div className="m-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
-            {courErr}
+
+          {/* Harita */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-semibold text-neutral-800">
+                Harita (OpenStreetMap)
+              </div>
+              <div className="text-xs text-neutral-500">
+                Marker’a tıklayarak ilgili kuryeyi seçebilirsin.
+              </div>
+            </div>
+
+            <LiveLeaflet
+              markers={markers}
+              selectedId={selectedId}
+              onSelect={(id) => setSelectedId(id)}
+              isFullscreen
+              overlay={
+                <div className="pointer-events-none absolute right-3 top-3 flex flex-col items-end gap-2">
+                  <div className="pointer-events-auto rounded-full bg-black/70 px-3 py-1 text-xs text-white shadow-lg">
+                    {loading ? 'Konumlar güncelleniyor…' : 'Canlı konum'}
+                  </div>
+                  {activeCourier && (
+                    <div className="pointer-events-auto w-full max-w-xs rounded-2xl bg-white/90 p-3 text-xs shadow-lg backdrop-blur">
+                      <div className="font-semibold">
+                        {activeCourier.courier_name || 'Seçili Kurye'}
+                      </div>
+                      {activeCourier.courier_phone && (
+                        <div className="mt-1 text-neutral-700">
+                          📞 {activeCourier.courier_phone}
+                        </div>
+                      )}
+                      {activeCourier.location_updated_at && (
+                        <div className="mt-1 text-neutral-500">
+                          Son konum: {formatDateTime(activeCourier.location_updated_at)}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              }
+            />
           </div>
-        )}
+        </div>
       </section>
     </div>
   );
