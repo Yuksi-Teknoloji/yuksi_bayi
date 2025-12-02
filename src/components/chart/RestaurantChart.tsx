@@ -17,7 +17,7 @@ import {
 
 function getDays(s: string | number | Date, e: string | number | Date) {
   const arr = [];
-  let d = new Date(s);
+  const d = new Date(s);
   while (d < new Date(e)) {
     console.log(d);
     arr.push(d.toISOString().substring(0, 10));
@@ -112,7 +112,7 @@ interface ChartPieProps {
   title?: string;
 }
 
-export function ChartPie({ data, title }: ChartPieProps) {
+export function ChartPie({ data }: ChartPieProps) {
   const orderByStatus = data.reduce((acc: { [key: string]: number }, o) => {
     const status = o.status;
     acc[status] = (acc[status] || 0) + 1;

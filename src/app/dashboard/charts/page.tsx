@@ -2,7 +2,14 @@
 
 import * as React from "react";
 import { ChartPie, ChartLine } from "@/src/components/chart/RestaurantChart";
+import { ChartBar } from "@/src/components/chart/DealerChart";
 import { getAuthToken } from "@/src/utils/auth";
+
+type DealerJob = {
+  id: string;
+  totalPrice?: number;
+  commissionRate?: number;
+};
 
 async function readJson<T = any>(res: Response): Promise<T> {
   const txt = await res.text().catch(() => "");
@@ -69,6 +76,8 @@ export default function Charts() {
 
   const [startDate, setStartDate] = React.useState<Date | null>(null);
   const [endDate, setEndDate] = React.useState<Date | null>(null);
+
+  const [data, setData] = React.useState<DealerJob[]>([]);
 
   React.useEffect(() => {
     if (rangeOption === "daily") {
@@ -161,6 +170,35 @@ export default function Charts() {
     fetchOrdersWithDateRange();
   }, [fetchOrdersWithDateRange]);
 
+  async function loadList() {
+    setError(null);
+    try {
+      const res = await fetch(`/yuksi/dealer/jobs`, {
+        headers,
+        cache: "no-store",
+      });
+      const j: any = await readJson(res);
+      if (!res.ok || j?.success === false)
+        throw new Error(pickMsg(j, `HTTP ${res.status}`));
+      const list = Array.isArray(j?.data) ? j.data : [];
+      const mapped: CorporateJob[] = list.map((x: any) => ({
+        id: String(x?.id),
+        totalPrice: x?.totalPrice != null ? Number(x.totalPrice) : undefined,
+        commissionRate:
+          x?.commissionRate != null ? Number(x.commissionRate) : undefined,
+      }));
+      setData(mapped);
+    } catch (e: any) {
+      setError(e?.message || "Kayıtlar alınamadı.");
+      setData([]);
+    }
+  }
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  React.useEffect(() => {
+    loadList();
+  }, []);
+
   if (error) {
     return <div className="p-10 text-rose-600 whitespace-pre-wrap">{error}</div>;
   }
@@ -174,7 +212,6 @@ export default function Charts() {
 
   return (
     <div className="flex flex-wrap justify-between gap-16">
-      {/* ==================== LINE CHART ==================== */}
       <div className="w-full max-w-[500px] h-[300px] bg-white rounded-md shadow">
         <div className="flex justify-between items-center p-3">
           <select
@@ -214,7 +251,6 @@ export default function Charts() {
         />
       </div>
 
-      {/* ==================== PIE CHART ==================== */}
       <div className="w-full max-w-[500px] h-[300px] bg-white rounded-md shadow">
         <div className="flex justify-between items-center p-3">
           <select
@@ -237,6 +273,17 @@ export default function Charts() {
         </div>
 
         <ChartPie data={orders} title="Sipariş Dağılımı" />
+      </div>
+
+      <div className="w-full max-w-[500px] h-[300px] bg-white rounded-md shadow overflow-auto">
+        <div className="flex justify-between items-center p-3">
+            <span className="text-sm font-semibold">Bayi Komisyonları</span>
+            <span className="bg-gray-100 px-2 py-1 text-sm fonst-semibold rounded">
+                Toplam: {data.reduce((sum, job) => sum + (job.totalPrice! * (job.commissionRate! / 100) || 0), 0).toFixed(2)}₺
+            </span> 
+        </div>
+        
+        <ChartBar data={data}></ChartBar>
       </div>
     </div>
   );
