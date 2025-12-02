@@ -210,11 +210,20 @@ export default function CreateCorporate() {
 
   return (
     <div className="p-4">
-      <h1 className="text-2xl font-bold mb-4">Kurumsal Üye Oluştur</h1>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            Kurumsal Üye Oluştur
+          </h1>
+          <p className="text-sm text-neutral-600">
+            Yeni kurumsal üye oluşturabilirsiniz. Ancak kurumsal üyeleri bayinize bağlayamaz ve onlardan komisyon alamazsınız.
+          </p>
+        </div>
+      </div>
       <form
         key={formKey}
         onSubmit={onSubmit}
-        className="space-y-4 bg-[rgb(251,231,215)] p-4 rounded-md shadow grid grid-cols-2 gap-6"
+        className="space-y-4 bg-[rgb(251,231,215)] p-4 rounded-md shadow grid grid-cols-2 gap-6 mt-4"
       >
         <div>
           <div className="grid place-items-center">
