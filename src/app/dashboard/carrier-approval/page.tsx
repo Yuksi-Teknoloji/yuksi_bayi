@@ -112,7 +112,6 @@ const computeActiveFromDocs = (docs: DocItem[]) =>
 
 export default function CarrierListPage() {
   const { role } = useParams<{ role: string }>();
-  const createHref = `/dashboards/${role}/admin/dealers/create-dealer`;
 
   const token = React.useMemo(() => getAuthToken(), []);
   const headers = React.useMemo<HeadersInit>(() => {
@@ -250,12 +249,6 @@ export default function CarrierListPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">Kurye Listesi</h1>
-        <Link
-          href={createHref}
-          className="btn-accent rounded-2xl bg-orange-500 text-white px-4 py-2 text-sm font-medium shadow-sm transition active:translate-y-px"
-        >
-          Yeni Kurye Oluştur
-        </Link>
       </div>
 
       {/* Filter / top bar */}
