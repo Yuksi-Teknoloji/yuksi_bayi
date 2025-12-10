@@ -30,6 +30,12 @@ const msg = (d: any, fb: string) => d?.message || d?.detail || d?.title || fb;
 const fmtDT = (iso?: string | null) => (iso ? new Date(iso).toLocaleString('tr-TR') : '—');
 
 /* ================= Types ================= */
+type RestaurantPackageInfo = {
+  max_package?: number | null;          // toplam paket
+  delivered_count?: number | null;      // teslim edilen
+  remaining_packages?: number | null;   // kalan paket
+};
+
 type RestaurantRow = {
   id: string;
   name: string;
@@ -47,6 +53,7 @@ type RestaurantRow = {
   opening_hour?: string | null;
   closing_hour?: string | null;
   created_at?: string | null;
+  packageInfo?: RestaurantPackageInfo | null;
 };
 
 type ProfileResponse = {
@@ -113,6 +120,9 @@ export default function DealerRestaurantListPage() {
   const [profileLoading, setProfileLoading] = React.useState(false);
   const [profileErr, setProfileErr] = React.useState<string | null>(null);
 
+  // Paket modalı
+  const [packageModalRow, setPackageModalRow] = React.useState<RestaurantRow | null>(null);
+
   // Harita seçili marker
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
 
@@ -172,19 +182,29 @@ export default function DealerRestaurantListPage() {
       if (!res.ok || j?.success === false) throw new Error(msg(j, `HTTP ${res.status}`));
 
       const list = Array.isArray(j?.data) ? j.data : Array.isArray(j) ? j : [];
-      const mapped: RestaurantRow[] = list.map((r: any) => ({
-        id: String(r?.id ?? ''), name: String(r?.name ?? '—'),
-        email: r?.email ?? null, phone: r?.phone ?? null,
-        contact_person: r?.contact_person ?? null,
-        tax_number: r?.tax_number ?? null,
-        address_line1: r?.address_line1 ?? null,
-        address_line2: r?.address_line2 ?? null,
-        city_name: r?.city_name ?? null, state_name: r?.state_name ?? null, country_name: r?.country_name ?? null,
-        latitude: typeof r?.latitude === 'number' ? r.latitude : (r?.latitude ? Number(r.latitude) : null),
-        longitude: typeof r?.longitude === 'number' ? r.longitude : (r?.longitude ? Number(r.longitude) : null),
-        opening_hour: r?.opening_hour ?? null, closing_hour: r?.closing_hour ?? null,
-        created_at: r?.created_at ?? null,
-      })).filter((r: RestaurantRow) => r.id);
+      const mapped: RestaurantRow[] = list.map((r: any) => {
+        const pkg = r?.package ?? null;
+        const packageInfo: RestaurantPackageInfo | null = pkg ? {
+          max_package: pkg.max_package ?? null,
+          delivered_count: pkg.delivered_count ?? null,
+          remaining_packages: pkg.remaining_packages ?? null,
+        } : null;
+
+        return {
+          id: String(r?.id ?? ''), name: String(r?.name ?? '—'),
+          email: r?.email ?? null, phone: r?.phone ?? null,
+          contact_person: r?.contact_person ?? null,
+          tax_number: r?.tax_number ?? null,
+          address_line1: r?.address_line1 ?? null,
+          address_line2: r?.address_line2 ?? null,
+          city_name: r?.city_name ?? null, state_name: r?.state_name ?? null, country_name: r?.country_name ?? null,
+          latitude: typeof r?.latitude === 'number' ? r.latitude : (r?.latitude ? Number(r.latitude) : null),
+          longitude: typeof r?.longitude === 'number' ? r.longitude : (r?.longitude ? Number(r.longitude) : null),
+          opening_hour: r?.opening_hour ?? null, closing_hour: r?.closing_hour ?? null,
+          created_at: r?.created_at ?? null,
+          packageInfo,
+        };
+      }).filter((r: RestaurantRow) => r.id);
 
       setRows(mapped);
     } catch (e: any) {
@@ -209,24 +229,24 @@ export default function DealerRestaurantListPage() {
     );
   }, [rows, q]);
 
-//Delete relationship
+  //Delete relationship
   const unbind = React.useCallback(async (id: string) => {
-  if (typeof window !== 'undefined') {
-    const ok = window.confirm('Bu restoranın bayi bağlantısını kaldırmak istiyor musunuz? (Restoran silinmez)');
-    if (!ok) return;
-  }
-  setRemovingId(id);
-  try {
-    const res = await fetch(`/yuksi/dealer/restaurants/${id}`, { method: 'DELETE', headers });
-    const j: unknown = await readJson(res);
-    if (!res.ok || (j as any)?.success === false) throw new Error(msg(j, `HTTP ${res.status}`));
-    await load();
-  } catch (e: any) {
-    alert(e?.message || 'Bağlantı kaldırılamadı.');
-  } finally {
-    setRemovingId('');
-  }
-}, [headers, load]);
+    if (typeof window !== 'undefined') {
+      const ok = window.confirm('Bu restoranın bayi bağlantısını kaldırmak istiyor musunuz? (Restoran silinmez)');
+      if (!ok) return;
+    }
+    setRemovingId(id);
+    try {
+      const res = await fetch(`/yuksi/dealer/restaurants/${id}`, { method: 'DELETE', headers });
+      const j: unknown = await readJson(res);
+      if (!res.ok || (j as any)?.success === false) throw new Error(msg(j, `HTTP ${res.status}`));
+      await load();
+    } catch (e: any) {
+      alert(e?.message || 'Bağlantı kaldırılamadı.');
+    } finally {
+      setRemovingId('');
+    }
+  }, [headers, load]);
 
   /* ========== Profile fetch ========== */
   async function openProfile(id: string) {
@@ -763,11 +783,18 @@ export default function DealerRestaurantListPage() {
                   <td className="px-4 py-2">{fmtDT(r.created_at)}</td>
                   <td className="px-4 py-2">
                     <div className="flex flex-wrap items-center gap-2">
-                      <button onClick={() => { setSelectedId(r.id); openProfile(r.id);} } className="inline-flex items-center gap-2 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs hover:bg-neutral-50" title="Haritada/Panelde Gör">
-                        <MapPin className="h-4 w-4" /> Haritada
+                      <button onClick={() => { setSelectedId(r.id);} } className="inline-flex items-center gap-2 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs hover:bg-neutral-50" title="Haritada/Panelde Gör">
+                        <MapPin className="h-4 w-4" /> Haritada Göster
                       </button>
                       <button onClick={() => openProfile(r.id)} className="inline-flex items-center gap-2 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs hover:bg-neutral-50" title="Profili Gör">
-                        <Eye className="h-4 w-4" /> Gör
+                        <Eye className="h-4 w-4" /> Profili Gör
+                      </button>
+                      <button
+                        onClick={() => setPackageModalRow(r)}
+                        className="inline-flex items-center gap-2 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs hover:bg-neutral-50"
+                        title="Paket bilgisi"
+                      >
+                        Paket Bilgisi
                       </button>
                       <button
                         onClick={() => unbind(r.id)}
@@ -794,21 +821,237 @@ export default function DealerRestaurantListPage() {
         {error && <div className="m-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>}
       </section>
 
-      {/* Profile Modal (ham JSON görüntüsü) */}
+      {/* Profile Modal (restoran kimliği) */}
       {profileId && (
-        <div className="fixed inset-0 z-[2000] grid place-items-center bg-black/40 p-4" onClick={() => setProfileId(null)}>
-          <div className="max-h-[80vh] w-full max-w-3xl overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="fixed inset-0 z-[2000] grid place-items-center bg-black/40 p-4"
+          onClick={() => setProfileId(null)}
+        >
+          <div
+            className="max-h-[80vh] w-full max-w-3xl overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between border-b px-4 py-3">
-              <div className="font-semibold">Restoran Profili</div>
-              <button onClick={() => setProfileId(null)} className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-sm hover:bg-neutral-50">Kapat</button>
+              <div className="font-semibold">Restoran Kimliği</div>
+              <button
+                onClick={() => setProfileId(null)}
+                className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-sm hover:bg-neutral-50"
+              >
+                Kapat
+              </button>
             </div>
+
             <div className="p-4">
-              {profileLoading && <div className="text-sm text-neutral-500">Yükleniyor…</div>}
-              {profileErr && <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{profileErr}</div>}
-              {!profileLoading && !profileErr && (
-                <pre className="max-h-[60vh] overflow-auto rounded-lg bg-neutral-50 p-3 text-xs">
-                  {JSON.stringify(profileJson, null, 2)}
-                </pre>
+              {profileLoading && (
+                <div className="text-sm text-neutral-500">
+                  <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />
+                  Yükleniyor…
+                </div>
+              )}
+
+              {profileErr && (
+                <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+                  {profileErr}
+                </div>
+              )}
+
+              {!profileLoading && !profileErr && profileJson && (
+                <div className="space-y-4">
+                  {/* Üst başlık – logo / isim / id */}
+                  <div className="flex flex-col gap-2 rounded-2xl bg-neutral-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <div className="text-xs uppercase tracking-wide text-neutral-500">
+                        Restoran Adı
+                      </div>
+                      <div className="text-lg font-semibold text-neutral-900">
+                        {profileJson.name ?? '—'}
+                      </div>
+                    </div>
+                    <div className="rounded-xl bg-white px-3 py-2 text-xs text-neutral-600 shadow-inner">
+                      <div className="font-mono text-[11px] text-neutral-500">
+                        Restoran Kimliği
+                      </div>
+                      <div className="truncate font-mono text-[12px] font-semibold">
+                        {profileJson.id}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bilgi alanları */}
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <div className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                        İletişim Bilgileri
+                      </div>
+                      <div className="space-y-1 text-sm">
+                        <div className="flex justify-between gap-4">
+                          <span className="text-neutral-500">Mail</span>
+                          <span className="font-medium">
+                            {profileJson.email ?? '—'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <span className="text-neutral-500">Telefon</span>
+                          <span className="font-medium">
+                            {profileJson.phone ?? '—'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <span className="text-neutral-500">Yetkili Kişi</span>
+                          <span className="font-medium">
+                            {profileJson.contactPerson ?? '—'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <span className="text-neutral-500">Vergi Numarası</span>
+                          <span className="font-medium">
+                            {profileJson.taxNumber ?? '—'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                        Konum & Saatler
+                      </div>
+                      <div className="space-y-1 text-sm">
+                        <div>
+                          <div className="text-neutral-500">Tam Adres</div>
+                          <div className="font-medium">
+                            {profileJson.fullAddress ??
+                              profileJson.addressLine1 ??
+                              '—'}
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 mt-1">
+                          <div>
+                            <div className="text-[12px] text-neutral-500">
+                              Açılış Saati
+                            </div>
+                            <div className="text-sm font-medium">
+                              {profileJson.openingHour ?? '—'}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-[12px] text-neutral-500">
+                              Kapanış Saati
+                            </div>
+                            <div className="text-sm font-medium">
+                              {profileJson.closingHour ?? '—'}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2 pt-1 text-sm">
+                          <div>
+                            <div className="text-[11px] text-neutral-500">
+                              İlçe
+                            </div>
+                            <div className="font-medium">
+                              {profileJson.location?.cityName ?? '—'}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-[11px] text-neutral-500">
+                              Şehir
+                            </div>
+                            <div className="font-medium">
+                              {profileJson.location?.stateName ?? '—'}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-[11px] text-neutral-500">
+                              Ülke
+                            </div>
+                            <div className="font-medium">
+                              {profileJson.location?.countryName ?? '—'}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Alt metadata */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-3 text-[11px] text-neutral-500">
+                    <div>
+                      Oluşturma:{' '}
+                      <span className="font-medium">
+                        {fmtDT(profileJson.createdAt ?? null)}
+                      </span>
+                    </div>
+                    <div>
+                      Bayiye Bağlanma:{' '}
+                      <span className="font-medium">
+                        {fmtDT(profileJson.linkedAt ?? null)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Paket Bilgisi Modalı */}
+      {packageModalRow && (
+        <div
+          className="fixed inset-0 z-[2000] grid place-items-center bg-black/40 p-4"
+          onClick={() => setPackageModalRow(null)}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl border border-neutral-200 bg-white shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b px-4 py-3">
+              <div className="font-semibold">Paket Bilgisi</div>
+              <button
+                onClick={() => setPackageModalRow(null)}
+                className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-sm hover:bg-neutral-50"
+              >
+                Kapat
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4 text-sm">
+              <div className="rounded-xl bg-neutral-50 p-3">
+                <div className="text-[11px] uppercase tracking-wide text-neutral-500">
+                  Restoran
+                </div>
+                <div className="text-base font-semibold">
+                  {packageModalRow.name}
+                </div>
+                <div className="mt-1 text-[11px] font-mono text-neutral-500">
+                  {packageModalRow.id}
+                </div>
+              </div>
+
+              {packageModalRow.packageInfo ? (
+                <div className="grid gap-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-neutral-600">Toplam paket</span>
+                    <span className="font-semibold">
+                      {packageModalRow.packageInfo.max_package ?? '—'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-neutral-600">Teslim edilen</span>
+                    <span className="font-semibold">
+                      {packageModalRow.packageInfo.delivered_count ?? '—'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-neutral-600">Kalan paket</span>
+                    <span className="font-semibold">
+                      {packageModalRow.packageInfo.remaining_packages ?? '—'}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                  Bu restoran için paket bilgisi bulunmuyor.
+                </div>
               )}
             </div>
           </div>

@@ -719,8 +719,7 @@ export default function CreateManagementPage() {
                     allFiltered.map((r: AllRestaurantOption) => (
                       <option key={r.id} value={r.id}>
                         {r.name}
-                        {r.email ? ` • ${r.email}` : ''}
-                        {r.phone ? ` • ${r.phone}` : ''} • {r.id}
+                        {r.phone ? ` • ${r.phone}` : ''}
                       </option>
                     ))}
                 </select>
