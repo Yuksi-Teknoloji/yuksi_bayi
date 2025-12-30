@@ -81,11 +81,26 @@ type ApiJob = {
 
   deliveryDate?: string | null; // "DD.MM.YYYY" veya null
   deliveryTime?: string | null; // "HH:mm" veya null
+
+  // ✅ yeni alanlar (resimdeki response)
+  companyId?: string | null;
+  companyName?: string | null;
 };
 
 type ListResponse = { success?: boolean; message?: string; data?: ApiJob[] };
 
 type LatLng = { lat: number; lng: number };
+
+type CompanyDTO = {
+  id: string;
+  companyName?: string | null;
+  companyPhone?: string | null;
+};
+
+type CompanyListResponse = { success?: boolean; message?: string; data?: CompanyDTO[] };
+
+/* ========= constants ========= */
+const COMPANY_LIST_ENDPOINT = '/yuksi/dealer/companies';
 
 /* ========= page ========= */
 export default function CompanyLoadClient() {
@@ -98,6 +113,10 @@ export default function CompanyLoadClient() {
 
   // ⚠️ bu endpoint param adı delivery_type (snake_case)
   const [deliveryType, setDeliveryType] = React.useState<'' | 'immediate' | 'scheduled'>('');
+
+  // ✅ yeni: companyId filtre alanı
+  const [companyName, setCompanyName] = React.useState<string>('');
+
   const [q, setQ] = React.useState('');
 
   // data
@@ -109,6 +128,9 @@ export default function CompanyLoadClient() {
   const [selected, setSelected] = React.useState<ApiJob | null>(null);
   const [editing, setEditing] = React.useState<ApiJob | null>(null);
   const [info, setInfo] = React.useState<string | null>(null);
+
+  // company map (companyId -> {name, phone})
+  const [companyMap, setCompanyMap] = React.useState<Record<string, { name?: string; phone?: string }>>({});
 
   // route modal
   const [routeOpen, setRouteOpen] = React.useState(false);
@@ -124,12 +146,48 @@ export default function CompanyLoadClient() {
     setTimeout(() => setInfo(null), 2500);
   }
 
+  // ✅ şirket listesini çek, map oluştur
+  const loadCompanies = React.useCallback(async () => {
+    try {
+      // ✅ limit/offset paramları swagger’daki gibi
+      const url = new URL(COMPANY_LIST_ENDPOINT, location.origin);
+      url.searchParams.set('limit', '200');
+      url.searchParams.set('offset', '0');
+
+      const res = await fetch(url.toString(), { headers, cache: 'no-store' });
+      const j = await readJson<CompanyListResponse>(res);
+
+      if (!res.ok || (j && (j as any).success === false)) {
+        console.warn('Company list error:', pickMsg(j, `HTTP ${res.status}`));
+        return;
+      }
+
+      const list: CompanyDTO[] = Array.isArray(j?.data) ? (j!.data as any) : [];
+      const map: Record<string, { name?: string; phone?: string }> = {};
+
+      for (const c of list) {
+        // ✅ id: companyId ile eşleşecek alan
+        const id = (c.id || '').toString();
+        if (!id) continue;
+
+        const name = (c.companyName || '').toString() || undefined;
+        const phone = (c.companyPhone || '').toString() || undefined;
+
+        map[id] = { name, phone };
+      }
+
+      setCompanyMap(map);
+    } catch (e) {
+      console.warn('Company list fetch failed:', e);
+    }
+  }, [headers]);
+
   const load = React.useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
-      // ✅ SADECE GET DEĞİŞTİ: /api/admin/dealers/companies/jobs
+      // ✅ GET: /api/admin/dealers/companies/jobs
       const url = new URL('/yuksi/admin/dealers/companies/jobs', location.origin);
 
       if (limit !== '') url.searchParams.set('limit', String(limit));
@@ -137,6 +195,9 @@ export default function CompanyLoadClient() {
 
       // swagger: delivery_type (isteğe bağlı)
       if (deliveryType) url.searchParams.set('delivery_type', deliveryType);
+
+      // ✅ yeni: companyId (resimdeki gibi)
+      if (companyName.trim()) url.searchParams.set('companyId', companyName.trim());
 
       const res = await fetch(url.toString(), { headers, cache: 'no-store' });
       const j = await readJson<ListResponse>(res);
@@ -153,7 +214,12 @@ export default function CompanyLoadClient() {
     } finally {
       setLoading(false);
     }
-  }, [headers, limit, offset, deliveryType]);
+  }, [headers, limit, offset, deliveryType, companyName]);
+
+  // ✅ ilk açılışta şirketleri çek (companyName/phone eşleştirme için)
+  React.useEffect(() => {
+    loadCompanies();
+  }, [loadCompanies]);
 
   React.useEffect(() => {
     load();
@@ -162,6 +228,7 @@ export default function CompanyLoadClient() {
   const filtered = React.useMemo(() => {
     const qq = q.trim().toLowerCase();
     if (!qq) return rows;
+
     return rows.filter((r) =>
       [
         r.pickupAddress || '',
@@ -171,12 +238,24 @@ export default function CompanyLoadClient() {
         r.deliveryType || '',
         r.deliveryDate || '',
         r.deliveryTime || '',
+        r.companyId || '',
+        r.companyName || '',
+        companyMap[(r.companyId || '') as string]?.name || '',
+        companyMap[(r.companyId || '') as string]?.phone || '',
       ]
         .join(' ')
         .toLowerCase()
         .includes(qq),
     );
-  }, [rows, q]);
+  }, [rows, q, companyMap]);
+
+  function resolveCompany(r: ApiJob) {
+    const id = (r.companyId || '').toString();
+    const fromMap = id ? companyMap[id] : undefined;
+    const name = (r.companyName || fromMap?.name || '') || undefined;
+    const phone = (fromMap?.phone || '') || undefined;
+    return { id: id || undefined, name, phone };
+  }
 
   // CRUD (aynı bırakıldı)
   async function onDelete(id: string) {
@@ -277,6 +356,7 @@ export default function CompanyLoadClient() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">Yük Listesi</h1>
+
         <div className="flex items-center gap-2">
           <label className="text-sm text-neutral-600">Limit</label>
           <input
@@ -287,6 +367,7 @@ export default function CompanyLoadClient() {
             className="w-24 rounded-lg border border-neutral-300 bg-neutral-100 px-2 py-1.5 text-sm"
             placeholder="-"
           />
+
           <label className="text-sm text-neutral-600">Offset</label>
           <input
             type="number"
@@ -295,6 +376,16 @@ export default function CompanyLoadClient() {
             onChange={(e) => setOffset(Number(e.target.value) || 0)}
             className="w-24 rounded-lg border border-neutral-300 bg-neutral-100 px-2 py-1.5 text-sm"
           />
+
+          {/* ✅ yeni: companyId */}
+          <label className="text-sm text-neutral-600">Şirket Adı</label>
+          <input
+            value={companyName}
+            onChange={(e) => setCompanyName(e.target.value)}
+            className="w-56 rounded-lg border border-neutral-300 bg-neutral-100 px-2 py-1.5 text-sm"
+            placeholder="örn: Yüksi..."
+          />
+
           <label className="text-sm text-neutral-600">Tip</label>
           <select
             value={deliveryType}
@@ -302,9 +393,10 @@ export default function CompanyLoadClient() {
             className="rounded-lg border border-neutral-300 bg-white px-2 py-1.5 text-sm"
           >
             <option value="">Tümü</option>
-            <option value="immediate">immediate</option>
-            <option value="scheduled">scheduled</option>
+            <option value="immediate">randevusuz</option>
+            <option value="scheduled">randevulu</option>
           </select>
+
           <button
             onClick={load}
             className="rounded-xl bg-neutral-200 px-4 py-2 text-sm font-medium text-neutral-800 hover:bg-neutral-300"
@@ -320,7 +412,7 @@ export default function CompanyLoadClient() {
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Ara: adres, ödeme türü, not…"
+              placeholder="Ara: adres, ödeme türü, not, şirket…"
               className="w-full rounded-xl border border-neutral-300 bg-neutral-100 px-3 py-2 text-neutral-800 outline-none ring-2 ring-transparent transition placeholder:text-neutral-400 focus:bg-white focus:ring-sky-200"
             />
           </div>
@@ -332,6 +424,7 @@ export default function CompanyLoadClient() {
           <table className="min-w-full border-t border-neutral-200/70">
             <thead>
               <tr className="text-left text-sm text-neutral-500">
+                <th className="px-4 py-3 font-medium">Şirket</th>
                 <th className="px-4 py-3 font-medium">Alış / Teslim</th>
                 <th className="px-4 py-3 font-medium">Teslimat Tipi</th>
                 <th className="px-4 py-3 font-medium">Randevu</th>
@@ -341,55 +434,69 @@ export default function CompanyLoadClient() {
                 <th className="px-4 py-3 font-medium w-[200px]"></th>
               </tr>
             </thead>
+
             <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={7} className="px-6 py-10 text-center text-sm text-neutral-500">
+                  <td colSpan={8} className="px-6 py-10 text-center text-sm text-neutral-500">
                     Yükleniyor…
                   </td>
                 </tr>
               )}
 
               {!loading &&
-                filtered.map((r) => (
-                  <tr key={r.id} className="border-t border-neutral-200/70 align-top hover:bg-neutral-50">
-                    <td className="px-4 py-3">
-                      <div className="text-neutral-900 font-medium line-clamp-2">{r.pickupAddress || '-'}</div>
-                      <div className="mt-1 text-sm text-neutral-700 line-clamp-2">→ {r.dropoffAddress || '-'}</div>
-                      {r.specialNotes && <div className="mt-1 text-xs text-neutral-500">{r.specialNotes}</div>}
-                      <div className="text-[11px] text-neutral-400 mt-1">#{r.id}</div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ${badgeColor(r.deliveryType)}`}>
-                        {r.deliveryType || '-'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-sm">{fmtAppt(r.deliveryDate, r.deliveryTime)}</td>
-                    <td className="px-4 py-3 text-sm">{r.paymentMethod || '-'}</td>
-                    <td className="px-4 py-3 font-semibold">{fmtTRY(r.totalPrice)}</td>
-                    <td className="px-4 py-3 text-sm">{fmtDate(r.createdAt)}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => showRoute(r)}
-                          className="rounded-lg bg-sky-600 px-3 py-1.5 text-sm font-semibold text-white shadow hover:bg-sky-700"
-                        >
-                          Haritada Göster
-                        </button>
-                        <button
-                          onClick={() => setSelected(r)}
-                          className="rounded-lg bg-sky-500 px-3 py-1.5 text-sm font-semibold text-white shadow hover:bg-sky-600"
-                        >
-                          Görüntüle
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                filtered.map((r) => {
+                  const comp = resolveCompany(r);
+                  return (
+                    <tr key={r.id} className="border-t border-neutral-200/70 align-top hover:bg-neutral-50">
+                      {/* ✅ yeni: şirket bilgileri */}
+                      <td className="px-4 py-3">
+                        <div className="text-neutral-900 font-medium line-clamp-2">{comp.name || '-'}</div>
+                        <div className="mt-1 text-sm text-neutral-700 line-clamp-1">{comp.phone || '-'}</div>
+                        {comp.id && <div className="text-[11px] text-neutral-400 mt-1">#{comp.id}</div>}
+                      </td>
+
+                      <td className="px-4 py-3">
+                        <div className="text-neutral-900 font-medium line-clamp-2">{r.pickupAddress || '-'}</div>
+                        <div className="mt-1 text-sm text-neutral-700 line-clamp-2">→ {r.dropoffAddress || '-'}</div>
+                        {r.specialNotes && <div className="mt-1 text-xs text-neutral-500">{r.specialNotes}</div>}
+                        <div className="text-[11px] text-neutral-400 mt-1">#{r.id}</div>
+                      </td>
+
+                      <td className="px-4 py-3">
+                        <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ${badgeColor(r.deliveryType)}`}>
+                          {r.deliveryType || '-'}
+                        </span>
+                      </td>
+
+                      <td className="px-4 py-3 text-sm">{fmtAppt(r.deliveryDate, r.deliveryTime)}</td>
+                      <td className="px-4 py-3 text-sm">{r.paymentMethod || '-'}</td>
+                      <td className="px-4 py-3 font-semibold">{fmtTRY(r.totalPrice)}</td>
+                      <td className="px-4 py-3 text-sm">{fmtDate(r.createdAt)}</td>
+
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => showRoute(r)}
+                            className="rounded-lg bg-sky-600 px-3 py-1.5 text-sm font-semibold text-white shadow hover:bg-sky-700"
+                          >
+                            Haritada Göster
+                          </button>
+                          <button
+                            onClick={() => setSelected(r)}
+                            className="rounded-lg bg-sky-500 px-3 py-1.5 text-sm font-semibold text-white shadow hover:bg-sky-600"
+                          >
+                            Görüntüle
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
 
               {!loading && filtered.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-sm text-neutral-500">
+                  <td colSpan={8} className="px-6 py-12 text-center text-sm text-neutral-500">
                     Kayıt yok.
                   </td>
                 </tr>
@@ -406,21 +513,17 @@ export default function CompanyLoadClient() {
         </div>
       )}
 
-      {selected && <DetailModal row={selected} onClose={() => setSelected(null)} />}
+      {selected && <DetailModal row={selected} onClose={() => setSelected(null)} companyMap={companyMap} />}
 
       {editing && <EditModal row={editing} onClose={() => setEditing(null)} onSubmit={(payload) => onUpdate(editing.id, payload)} />}
 
       {/* Route Modal */}
       {routeOpen && routeFor && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4" onClick={() => setRouteOpen(false)}>
-          <div
-            className="w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between border-b px-5 py-4">
               <h3 className="text-lg font-semibold">
-                Rota:{' '}
-                <span className="font-normal">{routeFor.pickupAddress || '-'}</span> ➜{' '}
+                Rota: <span className="font-normal">{routeFor.pickupAddress || '-'}</span> ➜{' '}
                 <span className="font-normal">{routeFor.dropoffAddress || '-'}</span>
               </h3>
               <button onClick={() => setRouteOpen(false)} className="rounded-full p-2 hover:bg-neutral-100">
@@ -446,7 +549,20 @@ export default function CompanyLoadClient() {
 }
 
 /* ======== Modals ======== */
-function DetailModal({ row, onClose }: { row: ApiJob; onClose: () => void }) {
+function DetailModal({
+  row,
+  onClose,
+  companyMap,
+}: {
+  row: ApiJob;
+  onClose: () => void;
+  companyMap: Record<string, { name?: string; phone?: string }>;
+}) {
+  const cid = (row.companyId || '').toString();
+  const mapped = cid ? companyMap[cid] : undefined;
+  const companyName = row.companyName || mapped?.name || '-';
+  const companyPhone = mapped?.phone || '-';
+
   return (
     <div className="fixed inset-0 z-50 grid place-items-start overflow-y-auto bg-black/50 p-4">
       <div className="mx-auto w-full max-w-3xl rounded-2xl bg-white shadow-xl">
@@ -458,6 +574,11 @@ function DetailModal({ row, onClose }: { row: ApiJob; onClose: () => void }) {
         </div>
 
         <div className="space-y-4 p-5">
+          {/* ✅ yeni */}
+          <Field label="Company Id" value={row.companyId || '-'} />
+          <Field label="Company Name" value={companyName} />
+          <Field label="Company Phone" value={companyPhone} />
+
           <Field label="Teslimat Tipi" value={row.deliveryType} />
           <Field label="Randevu" value={fmtAppt(row.deliveryDate, row.deliveryTime)} />
           <Field label="Ödeme" value={row.paymentMethod} />
@@ -465,16 +586,14 @@ function DetailModal({ row, onClose }: { row: ApiJob; onClose: () => void }) {
           <Field label="Oluşturma" value={fmtDate(row.createdAt)} />
           <Field label="Alış Adresi" value={row.pickupAddress} />
           <Field label="Teslim Adresi" value={row.dropoffAddress} />
+
           <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4">
             <div className="mb-2 text-sm font-medium text-neutral-700">Not</div>
             <p className="whitespace-pre-line text-neutral-800">{row.specialNotes || '-'}</p>
           </div>
 
           <div className="flex items-center justify-end">
-            <button
-              onClick={onClose}
-              className="rounded-lg bg-neutral-200 px-4 py-2 text-sm font-semibold text-neutral-800 hover:bg-neutral-300"
-            >
+            <button onClick={onClose} className="rounded-lg bg-neutral-200 px-4 py-2 text-sm font-semibold text-neutral-800 hover:bg-neutral-300">
               Kapat
             </button>
           </div>
@@ -534,6 +653,7 @@ function EditModal({
               className="w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-sky-200"
             />
           </div>
+
           <div>
             <label className="mb-1 block text-sm font-medium text-neutral-700">Teslim Adresi</label>
             <input
@@ -542,6 +662,7 @@ function EditModal({
               className="w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-sky-200"
             />
           </div>
+
           <div>
             <label className="mb-1 block text-sm font-medium text-neutral-700">Not</label>
             <textarea
@@ -566,6 +687,7 @@ function EditModal({
                 <option value="transfer">transfer</option>
               </select>
             </div>
+
             <div>
               <label className="mb-1 block text-sm font-medium text-neutral-700">Toplam Ücret (₺)</label>
               <input
@@ -600,17 +722,10 @@ function EditModal({
           </div>
 
           <div className="mt-2 flex items-center justify-end gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-xl bg-neutral-200 px-4 py-2 text-sm font-semibold text-neutral-800 hover:bg-neutral-300"
-            >
+            <button type="button" onClick={onClose} className="rounded-xl bg-neutral-200 px-4 py-2 text-sm font-semibold text-neutral-800 hover:bg-neutral-300">
               İptal
             </button>
-            <button
-              type="submit"
-              className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-700"
-            >
+            <button type="submit" className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-700">
               Kaydet
             </button>
           </div>
@@ -642,7 +757,7 @@ function FitBounds({ start, end }: { start: LatLng; end: LatLng }) {
         ],
         { padding: [30, 30] },
       );
-    } catch {}
+    } catch { }
   }, [map, start, end]);
   return null;
 }
@@ -690,9 +805,7 @@ function RouteMap({ start, end }: { start: LatLng; end: LatLng }) {
 
   return (
     <>
-      {routeError && (
-        <div className="px-3 py-2 text-xs text-amber-700 bg-amber-50 border-b border-amber-200">{routeError}</div>
-      )}
+      {routeError && <div className="px-3 py-2 text-xs text-amber-700 bg-amber-50 border-b border-amber-200">{routeError}</div>}
       <MapContainer center={center} zoom={12} style={{ width: '100%', height: '100%' }}>
         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap contributors" />
         <FitBounds start={start} end={end} />
