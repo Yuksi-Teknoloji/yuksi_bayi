@@ -115,7 +115,7 @@ export default function CompanyLoadClient() {
   const [deliveryType, setDeliveryType] = React.useState<'' | 'immediate' | 'scheduled'>('');
 
   // ✅ yeni: companyId filtre alanı
-  const [companyName, setCompanyName] = React.useState<string>('');
+  const [companyId, setCompanyId] = React.useState<string>('');
 
   const [q, setQ] = React.useState('');
 
@@ -197,7 +197,7 @@ export default function CompanyLoadClient() {
       if (deliveryType) url.searchParams.set('delivery_type', deliveryType);
 
       // ✅ yeni: companyId (resimdeki gibi)
-      if (companyName.trim()) url.searchParams.set('companyId', companyName.trim());
+      if (companyId.trim()) url.searchParams.set('companyId', companyId.trim());
 
       const res = await fetch(url.toString(), { headers, cache: 'no-store' });
       const j = await readJson<ListResponse>(res);
@@ -214,7 +214,7 @@ export default function CompanyLoadClient() {
     } finally {
       setLoading(false);
     }
-  }, [headers, limit, offset, deliveryType, companyName]);
+  }, [headers, limit, offset, deliveryType, companyId]);
 
   // ✅ ilk açılışta şirketleri çek (companyName/phone eşleştirme için)
   React.useEffect(() => {
@@ -375,15 +375,6 @@ export default function CompanyLoadClient() {
             value={offset}
             onChange={(e) => setOffset(Number(e.target.value) || 0)}
             className="w-24 rounded-lg border border-neutral-300 bg-neutral-100 px-2 py-1.5 text-sm"
-          />
-
-          {/* ✅ yeni: companyId */}
-          <label className="text-sm text-neutral-600">Şirket Adı</label>
-          <input
-            value={companyName}
-            onChange={(e) => setCompanyName(e.target.value)}
-            className="w-56 rounded-lg border border-neutral-300 bg-neutral-100 px-2 py-1.5 text-sm"
-            placeholder="örn: Yüksi..."
           />
 
           <label className="text-sm text-neutral-600">Tip</label>
