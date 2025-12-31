@@ -35,7 +35,7 @@ type CityPriceDTO = {
   route_name: string;
   country_id: number;
   state_id: number;
-  city_id: number;
+  city_id?: number | null; // ✅ city_id null gelebilir
   courier_price: number;
   minivan_price: number;
   panelvan_price: number;
@@ -48,7 +48,7 @@ type CityPriceUI = {
   label: string;
   countryId: number;
   stateId: number;
-  cityId: number;
+  cityId?: number | null; // ✅ city_id null gelebilir
   stateName: string;
   cityName: string;
   courier: number;
@@ -527,20 +527,26 @@ export default function DealerCreateLoadPage() {
 
         if (cancelled) return;
 
-        const mapped: CityPriceUI[] = list.map((x) => ({
-          id: String(x.id),
-          label: String(x.route_name ?? ''),
-          countryId: Number(x.country_id),
-          stateId: Number(x.state_id),
-          cityId: Number(x.city_id),
-          stateName: stateMap.get(Number(x.state_id)) ?? '',
-          cityName: cityMap.get(Number(x.city_id)) ?? '',
-          courier: Number(x.courier_price ?? 0),
-          minivan: Number(x.minivan_price ?? 0),
-          panelvan: Number(x.panelvan_price ?? 0),
-          kamyonet: Number(x.kamyonet_price ?? 0),
-          kamyon: Number(x.kamyon_price ?? 0),
-        }));
+        const mapped: CityPriceUI[] = list.map((x) => {
+          const cityIdNum = x.city_id === null || x.city_id === undefined ? null : Number(x.city_id);
+          const cityName =
+            cityIdNum && Number.isFinite(cityIdNum) ? (cityMap.get(cityIdNum) ?? '') : '';
+
+          return {
+            id: String(x.id),
+            label: String(x.route_name ?? ''),
+            countryId: Number(x.country_id),
+            stateId: Number(x.state_id),
+            cityId: cityIdNum, // ✅ null korunur
+            stateName: stateMap.get(Number(x.state_id)) ?? '',
+            cityName, // ✅ city_id null ise boş string
+            courier: Number(x.courier_price ?? 0),
+            minivan: Number(x.minivan_price ?? 0),
+            panelvan: Number(x.panelvan_price ?? 0),
+            kamyonet: Number(x.kamyonet_price ?? 0),
+            kamyon: Number(x.kamyon_price ?? 0),
+          };
+        });
 
         setCityPrices(mapped);
       } catch (e: any) {
@@ -737,14 +743,41 @@ export default function DealerCreateLoadPage() {
     const city = (dropCityName || pickupCityName || '').toLowerCase().trim();
     const state = (dropStateName || pickupStateName || '').toLowerCase().trim();
 
-    if (!city || !state) return 0;
+    // ✅ admin ile aynı: state zorunlu, city opsiyonel
+    if (!state) return 0;
 
-    let match: CityPriceUI | undefined = cityPrices.find(
-      (p) => p.cityName.toLowerCase() === city && p.stateName.toLowerCase() === state,
-    );
+    let match: CityPriceUI | undefined;
 
+    // 1) City + State (en spesifik)
+    if (city) {
+      match = cityPrices.find(
+        (p) =>
+          p.cityName &&
+          p.stateName &&
+          p.cityName.toLowerCase() === city &&
+          p.stateName.toLowerCase() === state,
+      );
+    }
+
+    // 2) State bazlı satır (city yok) ✅ cityId null/undefined
     if (!match) {
-      match = cityPrices.find((p) => p.cityName.toLowerCase() === city);
+      match = cityPrices.find(
+        (p) =>
+          p.stateName &&
+          p.stateName.toLowerCase() === state &&
+          (!p.cityName || p.cityName.trim() === '') &&
+          p.cityId == null,
+      );
+    }
+
+    // 3) City (state uyuşmasa da)
+    if (!match && city) {
+      match = cityPrices.find((p) => p.cityName && p.cityName.toLowerCase() === city);
+    }
+
+    // 4) State (en geniş fallback)
+    if (!match) {
+      match = cityPrices.find((p) => p.stateName && p.stateName.toLowerCase() === state);
     }
 
     const selectedVehicle = vehicleProducts.find((v) => v.id === vehicleProductId);
