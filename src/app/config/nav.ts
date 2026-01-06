@@ -115,6 +115,7 @@ export const NAV: Record<Role, RawNavGroup[]> = {
         { label: "Ana", path: "dashboard" },
         { label: "Profil Yönetimi", path: "dashboard/profile" },
         { label: "Siparişler", path: "dashboard/transportations" },
+        { label: "Ticarim", path: "dashboard/commercial" },
         { label: "Şehrimdeki Taşıyıcılar", path: "dashboard/city-carriers" },
         { label: "Lojistik Takip", path: "dashboard/logistics-tracking" },
         { label: "Canlı Takip", path: "dashboard/follow-live" },
