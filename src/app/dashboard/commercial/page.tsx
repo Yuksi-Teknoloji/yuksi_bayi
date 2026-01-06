@@ -2413,7 +2413,8 @@ export default function CommercialListingsPage() {
                                                         <div key={im.id || im.file_id || idx} className="overflow-hidden rounded-2xl border border-neutral-200 bg-white">
                                                             <div className="h-32 w-full bg-neutral-50">
                                                                 {url ? (
-                                                                    // eslint-disable-next-line @next/next/no-img-element
+                                                                    // eslint-disable-next-line @next/next/no-img-element   
+                                                                    
                                                                     <img src={String(url)} alt={im.file_name || 'image'} className="h-full w-full object-cover" />
                                                                 ) : (
                                                                     <div className="flex h-full items-center justify-center text-xs text-neutral-500">file_url yok</div>
