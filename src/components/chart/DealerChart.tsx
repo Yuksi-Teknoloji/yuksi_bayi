@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 type CorporateJob = {
   id: string;
@@ -16,24 +16,24 @@ export function ChartBar({ data }: { data: CorporateJob[] }) {
   }));
 
   return (
-    <div className="w-[500px]">
-      <BarChart
-        width={600}
-        height={250}
-        data={chart_data}
-        margin={{
-          top: 5,
-          right: 30,
-          left: 20,
-          bottom: 5,
-        }}
-      >
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="name" />
-        <YAxis />
-        <Tooltip formatter={(value, name) => [value + " tl", name]} />
-        <Bar dataKey="value" barSize={50} fill="#8884d8" />
-      </BarChart>
+    <div className="w-full min-w-0 h-[250px] min-h-[200px]">
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart
+          data={chart_data}
+          margin={{
+            top: 5,
+            right: 8,
+            left: 0,
+            bottom: 5,
+          }}
+        >
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+          <YAxis tick={{ fontSize: 11 }} width={40} />
+          <Tooltip formatter={(value) => [value + " tl", ""]} contentStyle={{ fontSize: 12 }} />
+          <Bar dataKey="value" barSize={32} fill="#8884d8" radius={[4, 4, 0, 0]} />
+        </BarChart>
+      </ResponsiveContainer>
     </div>
   );
 }

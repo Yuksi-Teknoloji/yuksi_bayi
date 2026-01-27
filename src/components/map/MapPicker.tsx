@@ -111,8 +111,8 @@ export default function MapPicker({
 
   return (
     <div className="space-y-2">
-      <div className="flex items-end justify-between gap-2">
-        <div className="flex-1">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex-1 min-w-0">
           <label className="mb-1 block text-sm font-semibold text-neutral-700">{label}</label>
           <div className="flex overflow-hidden rounded-xl border border-neutral-300">
             <input
@@ -137,7 +137,7 @@ export default function MapPicker({
             </button>
           </div>
         </div>
-        <div className="min-w-[160px] text-right text-xs text-neutral-500">
+        <div className="shrink-0 sm:min-w-[160px] text-left sm:text-right text-xs text-neutral-500">
           {value?.lat && value?.lng ? (
             <>
               <div>

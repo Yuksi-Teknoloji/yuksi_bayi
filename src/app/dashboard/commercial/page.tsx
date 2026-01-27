@@ -950,11 +950,10 @@ export default function CommercialListingsPage() {
 
         return (
             <div className="flex flex-col gap-3 rounded-2xl border border-neutral-200 p-4 hover:bg-neutral-50">
-                <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-start justify-between gap-4">
-                        <div className="flex min-w-0 gap-3">
-                            <div className="shrink-0">
-                                <div className="h-44 w-44 overflow-hidden rounded-xl border border-neutral-200 bg-neutral-100">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="flex min-w-0 gap-3">
+                        <div className="shrink-0">
+                            <div className="h-32 w-32 sm:h-44 sm:w-44 overflow-hidden rounded-xl border border-neutral-200 bg-neutral-100">
                                     {thumbUrl ? (
                                         // eslint-disable-next-line @next/next/no-img-element
                                         <img src={thumbUrl} alt="thumb" className="h-full w-full object-cover" />
@@ -966,7 +965,6 @@ export default function CommercialListingsPage() {
                                 </div>
                             </div>
                         </div>
-                    </div>
                     <div className="min-w-0">
                         <div className="flex items-center gap-2">
                             <button
@@ -1065,7 +1063,7 @@ export default function CommercialListingsPage() {
                                 setTab(x.k);
                             }}
                             className={[
-                                'rounded-2xl px-4 py-2 text-sm font-semibold border shadow-sm transition',
+                                'rounded-2xl px-3 py-1.5 sm:px-4 sm:py-2 text-sm font-semibold border shadow-sm transition whitespace-nowrap',
                                 tab === x.k
                                     ? 'bg-indigo-500 text-white border-indigo-500'
                                     : 'bg-white text-neutral-800 border-neutral-300 hover:bg-neutral-50',
@@ -1519,7 +1517,7 @@ export default function CommercialListingsPage() {
                                 />
                             </div>
 
-                            <div className="grid grid-cols-3 gap-2 md:col-span-2">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 md:col-span-2">
                                 <div>
                                     <label className="mb-1 block text-sm font-semibold">Yıl</label>
                                     <input
@@ -1881,8 +1879,8 @@ export default function CommercialListingsPage() {
 
             {/* ===== Detail Modal ===== */}
             {detailOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
-                    <div className="w-full max-w-3xl rounded-2xl border border-neutral-200 bg-white shadow-xl">
+                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/30 p-3 sm:p-4">
+                    <div className="w-full max-w-3xl max-h-[90vh] flex flex-col rounded-2xl border border-neutral-200 bg-white shadow-xl">
                         <div className="flex items-center justify-between border-b border-neutral-200 px-5 py-4">
                             <div className="min-w-0">
                                 <div className="text-sm font-semibold text-neutral-900 truncate">
@@ -1898,7 +1896,7 @@ export default function CommercialListingsPage() {
                             </button>
                         </div>
 
-                        <div className="p-5">
+                        <div className="p-4 sm:p-5 overflow-y-auto">
                             {detailLoading && <div className="text-sm text-neutral-500">Yükleniyor…</div>}
                             {detailErr && (
                                 <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 whitespace-pre-line">
@@ -1983,7 +1981,7 @@ export default function CommercialListingsPage() {
 
             {/* ===== Edit Modal ===== */}
             {editOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
+                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/30 p-3 sm:p-4">
                     <div className="w-full max-w-6xl rounded-2xl border border-neutral-200 bg-white shadow-xl max-h-[90vh] flex flex-col">
                         <div className="flex items-center justify-between border-b border-neutral-200 px-5 py-4">
                             <div className="min-w-0">
@@ -2522,7 +2520,7 @@ export default function CommercialListingsPage() {
 
             {/* ===== Add Image Modal ===== */}
             {imgOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
+                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/30 p-3 sm:p-4">
                     <div className="w-full max-w-xl rounded-2xl border border-neutral-200 bg-white shadow-xl">
                         <div className="flex items-center justify-between border-b border-neutral-200 px-5 py-4">
                             <div className="min-w-0">

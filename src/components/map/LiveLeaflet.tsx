@@ -55,7 +55,7 @@ export default function LiveLeaflet({
 
   return (
     <div
-      className={`relative w-full rounded-2xl border border-neutral-200 overflow-hidden ${
+      className={`relative z-[120] w-full rounded-2xl border border-neutral-200 overflow-hidden ${
         isFullscreen ? "h-[85vh]" : "h-[400px]"
       }`}
     >
@@ -101,7 +101,7 @@ export default function LiveLeaflet({
       </MapContainer>
 
       {overlay && (
-        <div className="absolute inset-0 z-1200 pointer-events-none">
+        <div className="absolute inset-0 z-[800] pointer-events-none">
           <div className="relative h-full w-full">
             <div className="pointer-events-auto">{overlay}</div>
           </div>

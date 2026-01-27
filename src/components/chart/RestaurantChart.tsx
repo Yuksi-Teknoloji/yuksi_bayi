@@ -70,11 +70,11 @@ export function ChartLine({ startDate, endDate, option, data }: ChartLineProps) 
 
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <LineChart data={chart_data}>
-        <XAxis dataKey="name" />
-        <YAxis />
-        <Tooltip formatter={(value, name) => [value + " tl", name]} />
-        <CartesianGrid />
+      <LineChart data={chart_data} margin={{ top: 5, right: 8, left: 0, bottom: 5 }}>
+        <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+        <YAxis tick={{ fontSize: 11 }} width={40} />
+        <Tooltip formatter={(value) => [value + " tl", ""]} contentStyle={{ fontSize: 12 }} />
+        <CartesianGrid strokeDasharray="3 3" />
         <Line
           type="monotone"
           dataKey="value"
@@ -125,9 +125,9 @@ export function ChartPie({ data }: ChartPieProps) {
   }));
 
   return (
-    <div className="w-full max-w-[500px] h-[300px] bg-white rounded-md shadow">
+    <div className="w-full max-w-[500px] h-[250px] sm:h-[300px] min-h-[200px]">
       <ResponsiveContainer width="100%" height="100%">
-        <PieChart>
+        <PieChart margin={{ top: 4, right: 4, bottom: 4, left: 4 }}>
           <Pie
             data={chart_data}
             dataKey="value"

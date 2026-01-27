@@ -354,34 +354,37 @@ export default function CompanyLoadClient() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">Yük Listesi</h1>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">Yük Listesi</h1>
 
-        <div className="flex items-center gap-2">
-          <label className="text-sm text-neutral-600">Limit</label>
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="sr-only sm:not-sr-only sm:inline text-sm text-neutral-600">Limit</label>
           <input
             type="number"
             min={1}
             value={limit}
             onChange={(e) => setLimit(e.target.value === '' ? '' : Number(e.target.value))}
-            className="w-24 rounded-lg border border-neutral-300 bg-neutral-100 px-2 py-1.5 text-sm"
+            className="w-20 sm:w-24 rounded-lg border border-neutral-300 bg-neutral-100 px-2 py-1.5 text-sm"
             placeholder="-"
+            aria-label="Limit"
           />
 
-          <label className="text-sm text-neutral-600">Offset</label>
+          <label className="sr-only sm:not-sr-only sm:inline text-sm text-neutral-600">Offset</label>
           <input
             type="number"
             min={0}
             value={offset}
             onChange={(e) => setOffset(Number(e.target.value) || 0)}
-            className="w-24 rounded-lg border border-neutral-300 bg-neutral-100 px-2 py-1.5 text-sm"
+            className="w-20 sm:w-24 rounded-lg border border-neutral-300 bg-neutral-100 px-2 py-1.5 text-sm"
+            aria-label="Offset"
           />
 
-          <label className="text-sm text-neutral-600">Tip</label>
+          <label className="sr-only sm:not-sr-only sm:inline text-sm text-neutral-600">Tip</label>
           <select
             value={deliveryType}
             onChange={(e) => setDeliveryType(e.target.value as any)}
             className="rounded-lg border border-neutral-300 bg-white px-2 py-1.5 text-sm"
+            aria-label="Teslimat tipi"
           >
             <option value="">Tümü</option>
             <option value="immediate">randevusuz</option>
@@ -411,7 +414,8 @@ export default function CompanyLoadClient() {
 
         {error && <div className="px-4 pb-2 text-sm text-rose-600">{error}</div>}
 
-        <div className="overflow-x-auto">
+        {/* Masaüstü: tablo */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="min-w-full border-t border-neutral-200/70">
             <thead>
               <tr className="text-left text-sm text-neutral-500">
@@ -440,7 +444,6 @@ export default function CompanyLoadClient() {
                   const comp = resolveCompany(r);
                   return (
                     <tr key={r.id} className="border-t border-neutral-200/70 align-top hover:bg-neutral-50">
-                      {/* ✅ yeni: şirket bilgileri */}
                       <td className="px-4 py-3">
                         <div className="text-neutral-900 font-medium line-clamp-2">{comp.name || '-'}</div>
                         <div className="mt-1 text-sm text-neutral-700 line-clamp-1">{comp.phone || '-'}</div>
@@ -495,6 +498,58 @@ export default function CompanyLoadClient() {
             </tbody>
           </table>
         </div>
+
+        {/* Mobil: kart listesi */}
+        <div className="md:hidden divide-y divide-neutral-200/70">
+          {loading && (
+            <div className="px-4 py-10 text-center text-sm text-neutral-500">Yükleniyor…</div>
+          )}
+
+          {!loading && filtered.length === 0 && (
+            <div className="px-4 py-12 text-center text-sm text-neutral-500">Kayıt yok.</div>
+          )}
+
+          {!loading &&
+            filtered.map((r) => {
+              const comp = resolveCompany(r);
+              return (
+                <div
+                  key={r.id}
+                  className="p-4 hover:bg-neutral-50"
+                >
+                  <div className="flex flex-col gap-3">
+                    <div>
+                      <div className="text-sm font-medium text-neutral-500">{comp.name || 'Şirket'}</div>
+                      <div className="text-neutral-900 font-medium line-clamp-1">{r.pickupAddress || '-'}</div>
+                      <div className="text-sm text-neutral-600 line-clamp-1">→ {r.dropoffAddress || '-'}</div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 text-xs">
+                      <span className={`rounded-full px-2 py-0.5 font-semibold ring-1 ${badgeColor(r.deliveryType)}`}>
+                        {r.deliveryType || '-'}
+                      </span>
+                      <span className="text-neutral-500">{fmtAppt(r.deliveryDate, r.deliveryTime)}</span>
+                      <span className="text-neutral-500">{r.paymentMethod || '-'}</span>
+                      <span className="font-semibold text-neutral-900">{fmtTRY(r.totalPrice)}</span>
+                    </div>
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                      <button
+                        onClick={() => showRoute(r)}
+                        className="rounded-lg bg-sky-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-sky-700"
+                      >
+                        Haritada Göster
+                      </button>
+                      <button
+                        onClick={() => setSelected(r)}
+                        className="rounded-lg bg-sky-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-sky-600"
+                      >
+                        Görüntüle
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+        </div>
       </section>
 
       {/* toast */}
@@ -510,7 +565,7 @@ export default function CompanyLoadClient() {
 
       {/* Route Modal */}
       {routeOpen && routeFor && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4" onClick={() => setRouteOpen(false)}>
+        <div className="fixed inset-0 z-[200] grid place-items-center bg-black/50 p-4" onClick={() => setRouteOpen(false)}>
           <div className="w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between border-b px-5 py-4">
               <h3 className="text-lg font-semibold">
@@ -527,7 +582,7 @@ export default function CompanyLoadClient() {
 
             {!routeLoading && !routeErr && start && end && (
               <div className="p-4">
-                <div style={{ height: 420 }} className="rounded-xl overflow-hidden">
+                <div style={{ height: 420 }} className="relative z-[120] rounded-xl overflow-hidden">
                   <RouteMap start={start} end={end} />
                 </div>
               </div>
@@ -555,7 +610,7 @@ function DetailModal({
   const companyPhone = mapped?.phone || '-';
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-start overflow-y-auto bg-black/50 p-4">
+    <div className="fixed inset-0 z-[200] grid place-items-start overflow-y-auto bg-black/50 p-4">
       <div className="mx-auto w-full max-w-3xl rounded-2xl bg-white shadow-xl">
         <div className="flex items-center justify-between border-b px-5 py-4">
           <h3 className="text-xl font-semibold">Yük Detayı</h3>
@@ -626,16 +681,16 @@ function EditModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4" role="dialog" aria-modal="true">
-      <div className="w-full max-w-xl overflow-hidden rounded-2xl bg-white shadow-xl">
-        <div className="flex items-center justify-between border-b px-5 py-4">
-          <h3 className="text-lg font-semibold">Kaydı Düzenle</h3>
-          <button className="rounded-full p-2 hover:bg-neutral-100" onClick={onClose} aria-label="Kapat">
+    <div className="fixed inset-0 z-[200] grid place-items-center bg-black/50 p-3 sm:p-4 overflow-y-auto" role="dialog" aria-modal="true">
+      <div className="w-full max-w-xl max-h-[90vh] flex flex-col rounded-2xl bg-white shadow-xl my-4">
+        <div className="flex items-center justify-between border-b px-4 sm:px-5 py-3 sm:py-4 shrink-0">
+          <h3 className="text-base sm:text-lg font-semibold truncate pr-2">Kaydı Düzenle</h3>
+          <button className="rounded-full p-2 hover:bg-neutral-100 shrink-0" onClick={onClose} aria-label="Kapat">
             ✕
           </button>
         </div>
 
-        <form onSubmit={save} className="space-y-4 p-5">
+        <form onSubmit={save} className="flex-1 min-h-0 overflow-y-auto space-y-4 p-4 sm:p-5">
           <div>
             <label className="mb-1 block text-sm font-medium text-neutral-700">Alış Adresi</label>
             <input
@@ -712,11 +767,11 @@ function EditModal({
             </div>
           </div>
 
-          <div className="mt-2 flex items-center justify-end gap-3">
-            <button type="button" onClick={onClose} className="rounded-xl bg-neutral-200 px-4 py-2 text-sm font-semibold text-neutral-800 hover:bg-neutral-300">
+          <div className="mt-2 flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 pt-2">
+            <button type="button" onClick={onClose} className="w-full sm:w-auto rounded-xl bg-neutral-200 px-4 py-2.5 text-sm font-semibold text-neutral-800 hover:bg-neutral-300">
               İptal
             </button>
-            <button type="submit" className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-700">
+            <button type="submit" className="w-full sm:w-auto rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow hover:bg-emerald-700">
               Kaydet
             </button>
           </div>

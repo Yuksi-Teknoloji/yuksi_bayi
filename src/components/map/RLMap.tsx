@@ -31,6 +31,7 @@ function ClickHandler({ onPick }: { onPick: (lat: number, lng: number) => void }
 
 export default function RLMap({ center, marker, zoom = 13, onPick }: Props) {
   return (
+    <div className="relative z-[120] rounded-xl overflow-hidden">
     <MapContainer center={center} zoom={zoom} style={{ width: '100%', height: 280, borderRadius: 12 }}>
       <TileLayer
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -40,5 +41,6 @@ export default function RLMap({ center, marker, zoom = 13, onPick }: Props) {
       {marker && <CircleMarker center={marker} radius={10} weight={2} opacity={0.9} fillOpacity={0.8} />}
       <ClickHandler onPick={onPick} />
     </MapContainer>
+    </div>
   );
 }

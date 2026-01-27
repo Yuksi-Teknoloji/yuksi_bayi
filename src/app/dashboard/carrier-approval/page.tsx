@@ -248,13 +248,13 @@ export default function CarrierListPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">Kurye Listesi</h1>
+        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">Kurye Listesi</h1>
       </div>
 
       {/* Filter / top bar */}
       <section className="rounded-2xl border border-neutral-200/70 bg-white shadow-sm">
         <div className="p-4 sm:p-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div className="w-full sm:max-w-md">
+          <div className="w-full sm:max-w-md min-w-0">
             <label className="mb-1 block text-sm font-semibold text-neutral-700">Ara</label>
             <input
               value={query}
@@ -264,7 +264,7 @@ export default function CarrierListPage() {
             />
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
             <label className="text-sm text-neutral-600">Sayfa Boyutu</label>
             <select
               value={pageSize}
@@ -276,26 +276,26 @@ export default function CarrierListPage() {
           </div>
         </div>
 
-        {error && <div className="px-6 pb-4 text-sm text-rose-600">{error}</div>}
+        {error && <div className="px-4 sm:px-6 pb-4 text-sm text-rose-600">{error}</div>}
 
-        {/* Minimal table */}
-        <div className="overflow-x-auto">
+        {/* Masaüstü: tablo */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="min-w-full border-t border-neutral-200/70">
             <thead>
                 <tr className="text-left text-sm text-neutral-500">
-                <th className="px-6 py-3 font-medium w-[260px]">Ad Soyad</th>
-                <th className="px-6 py-3 font-medium w-[260px]">E-posta / Telefon</th>
-                <th className="px-6 py-3 font-medium w-[220px]">Ülke / Şehir</th>
-                <th className="px-6 py-3 font-medium w-[120px]">Aktif</th>
-                <th className="px-6 py-3 font-medium w-[190px]">Kayıt Tarihi</th>
-                <th className="px-6 py-3 font-medium w-[260px]"></th>
+                <th className="px-4 sm:px-6 py-3 font-medium w-[260px]">Ad Soyad</th>
+                <th className="px-4 sm:px-6 py-3 font-medium w-[260px]">E-posta / Telefon</th>
+                <th className="px-4 sm:px-6 py-3 font-medium w-[220px]">Ülke / Şehir</th>
+                <th className="px-4 sm:px-6 py-3 font-medium w-[120px]">Aktif</th>
+                <th className="px-4 sm:px-6 py-3 font-medium w-[190px]">Kayıt Tarihi</th>
+                <th className="px-4 sm:px-6 py-3 font-medium w-[260px]"></th>
               </tr>
             </thead>
 
             <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={6} className="px-6 py-10 text-center text-sm text-neutral-500">
+                  <td colSpan={6} className="px-4 sm:px-6 py-10 text-center text-sm text-neutral-500">
                     Yükleniyor…
                   </td>
                 </tr>
@@ -303,29 +303,29 @@ export default function CarrierListPage() {
 
               {!loading && pageRows.map((r) => (
                 <tr key={r.id} className="border-t border-neutral-200/70 hover:bg-neutral-50 align-top">
-                  <td className="px-6 py-4">
+                  <td className="px-4 sm:px-6 py-3 sm:py-4">
                     <div className="font-semibold text-neutral-900">{r.name}</div>
                     <div className="mt-1 text-xs text-neutral-500">ID: {r.id}</div>
                   </td>
 
-                  <td className="px-6 py-4">
+                  <td className="px-4 sm:px-6 py-3 sm:py-4">
                     <div className="text-neutral-900">{r.email}</div>
                     <div className="text-sm text-neutral-600">{r.phone}</div>
                   </td>
 
-                  <td className="px-6 py-4">
+                  <td className="px-4 sm:px-6 py-3 sm:py-4">
                     <div className="text-neutral-900">{r.country}</div>
                     <div className="text-sm text-neutral-600">{r.city}</div>
                   </td>
 
-                  <td className="px-6 py-4">
+                  <td className="px-4 sm:px-6 py-3 sm:py-4">
                     <ActivePill active={activeCache[r.id]} />
                   </td>
 
-                  <td className="px-6 py-4">{r.createdAt}</td>
+                  <td className="px-4 sm:px-6 py-3 sm:py-4">{r.createdAt}</td>
 
-                  <td className="px-6 py-4">
-                    <div className="flex items-center justify-end gap-2">
+                  <td className="px-4 sm:px-6 py-3 sm:py-4">
+                    <div className="flex flex-wrap items-center justify-end gap-2">
                       <button
                         onClick={() => setDetail(r)}
                         className="rounded-lg bg-sky-500 px-3 py-1.5 text-sm font-semibold text-white shadow hover:bg-sky-600"
@@ -354,7 +354,7 @@ export default function CarrierListPage() {
 
               {!loading && pageRows.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-sm text-neutral-500">
+                  <td colSpan={6} className="px-4 sm:px-6 py-12 text-center text-sm text-neutral-500">
                     Kayıt bulunamadı.
                   </td>
                 </tr>
@@ -363,14 +363,71 @@ export default function CarrierListPage() {
           </table>
         </div>
 
+        {/* Mobil: kart listesi */}
+        <div className="md:hidden border-t border-neutral-200/70 divide-y divide-neutral-200/70">
+          {loading && (
+            <div className="px-4 py-10 text-center text-sm text-neutral-500">Yükleniyor…</div>
+          )}
+
+          {!loading && pageRows.length === 0 && (
+            <div className="px-4 py-12 text-center text-sm text-neutral-500">Kayıt bulunamadı.</div>
+          )}
+
+          {!loading &&
+            pageRows.map((r) => (
+              <div key={r.id} className="p-4 hover:bg-neutral-50">
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[11px] text-neutral-400">ID: {r.id}</div>
+                      <div className="text-neutral-900 font-medium">{r.name}</div>
+                      <div className="text-sm text-neutral-600">{r.email}</div>
+                      <div className="text-sm text-neutral-600">{r.phone}</div>
+                    </div>
+                    <div className="shrink-0">
+                      <ActivePill active={activeCache[r.id]} />
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-neutral-500">
+                    <span>{r.country}</span>
+                    <span>•</span>
+                    <span>{r.city}</span>
+                    <span>•</span>
+                    <span>{r.createdAt}</span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      onClick={() => setDetail(r)}
+                      className="rounded-lg bg-sky-500 px-3 py-1.5 text-sm font-semibold text-white shadow hover:bg-sky-600"
+                    >
+                      Detay
+                    </button>
+                    <button
+                      onClick={() => setDocsUserId(r.id)}
+                      className="rounded-lg bg-indigo-500 px-3 py-1.5 text-sm font-semibold text-white shadow hover:bg-indigo-600"
+                    >
+                      Dokümanlar
+                    </button>
+                    <button
+                      onClick={() => handleDelete(r.id)}
+                      className="rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-semibold text-white shadow hover:bg-rose-700"
+                    >
+                      Sil
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+        </div>
+
         {/* pagination */}
-        <div className="flex items-center bg-white justify-between p-4 border-t border-neutral-200/70 text-sm text-neutral-600">
-          <div>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 sm:p-4 border-t border-neutral-200/70 text-sm text-neutral-600">
+          <div className="text-center sm:text-left">
             Toplam <span className="font-medium text-neutral-800">{filtered.length}</span> kayıt •
-            &nbsp;Sayfa {page}/{totalPages}
+            Sayfa {page}/{totalPages}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-center sm:justify-end gap-2">
             <button className="rounded-md px-3 py-1.5 border border-neutral-300 disabled:opacity-50"
               onClick={() => setPage(1)} disabled={page <= 1 || loading}>« İlk</button>
             <button className="rounded-md px-3 py-1.5 border border-neutral-300 disabled:opacity-50"
@@ -407,22 +464,22 @@ function DetailModal({ row, onClose }: { row: Row; onClose: () => void }) {
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-50">
+    <div className="fixed inset-0 z-[200]">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div
         role="dialog"
         aria-modal="true"
-        className="absolute left-1/2 top-10 w-[min(720px,92vw)] -translate-x-1/2 rounded-2xl bg-white shadow-xl ring-1 ring-black/5 overflow-hidden"
+        className="absolute left-1/2 top-4 sm:top-10 w-[min(720px,calc(100vw-1.5rem))] sm:w-[min(720px,94vw)] -translate-x-1/2 rounded-2xl bg-white shadow-xl ring-1 ring-black/5 overflow-hidden max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-5rem)] flex flex-col"
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b">
-          <div>
+        <div className="flex items-center justify-between px-4 sm:px-5 py-3 sm:py-4 border-b shrink-0">
+          <div className="min-w-0">
             <h3 className="text-lg font-semibold text-neutral-900">Kurye Detayı</h3>
-            <p className="text-xs text-neutral-500">{row.name} • {row.email}</p>
+            <p className="text-xs text-neutral-500 truncate">{row.name} • {row.email}</p>
           </div>
-          <button onClick={onClose} className="rounded-md p-2 text-neutral-500 hover:bg-neutral-100" aria-label="Kapat">✕</button>
+          <button onClick={onClose} className="rounded-md p-2 text-neutral-500 hover:bg-neutral-100 shrink-0" aria-label="Kapat">✕</button>
         </div>
 
-        <div className="max-h-[70vh] overflow-auto p-5">
+        <div className="max-h-[70vh] overflow-auto p-4 sm:p-5 flex-1 min-h-0">
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Ad Soyad">{row.name}</Field>
             <Field label="Kayıt Tarihi">{row.createdAt}</Field>
@@ -448,8 +505,8 @@ function DetailModal({ row, onClose }: { row: Row; onClose: () => void }) {
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-2 border-t px-5 py-4">
-          <button onClick={onClose} className="rounded-xl bg-neutral-200 px-4 py-2 text-sm font-semibold text-neutral-800 hover:bg-neutral-300">
+        <div className="flex items-center justify-end gap-2 border-t px-4 sm:px-5 py-3 sm:py-4 shrink-0">
+          <button onClick={onClose} className="rounded-xl bg-neutral-200 px-4 py-2 text-sm font-semibold text-neutral-800 hover:bg-neutral-300 w-full sm:w-auto">
             Kapat
           </button>
         </div>
@@ -593,15 +650,15 @@ function DocumentsModal({ userId, onClose }: { userId: string; onClose: () => vo
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-50">
+    <div className="fixed inset-0 z-[200]">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="absolute left-1/2 top-8 w-[min(1000px,94vw)] -translate-x-1/2 rounded-2xl bg-white shadow-xl ring-1 ring-black/5 overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b">
-          <h3 className="text-lg font-semibold">Kurye Dokümanları</h3>
-          <button onClick={onClose} className="rounded-md p-2 text-neutral-500 hover:bg-neutral-100" aria-label="Kapat">✕</button>
+      <div className="absolute left-1/2 top-4 sm:top-8 w-[min(1000px,calc(100vw-1.5rem))] sm:w-[min(1000px,94vw)] -translate-x-1/2 rounded-2xl bg-white shadow-xl ring-1 ring-black/5 overflow-hidden max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-4rem)] flex flex-col">
+        <div className="flex items-center justify-between px-4 sm:px-5 py-3 sm:py-4 border-b shrink-0">
+          <h3 className="text-lg font-semibold min-w-0 truncate">Kurye Dokümanları</h3>
+          <button onClick={onClose} className="rounded-md p-2 text-neutral-500 hover:bg-neutral-100 shrink-0" aria-label="Kapat">✕</button>
         </div>
 
-        <div className="max-h-[74vh] overflow-auto p-5">
+        <div className="max-h-[74vh] overflow-auto p-4 sm:p-5 flex-1 min-h-0">
           <div className="mb-4 flex flex-wrap items-center gap-2">
             <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${isActive ? 'bg-emerald-500 text-white' : 'bg-neutral-300 text-neutral-800'}`}>
               Aktiflik: {isActive ? 'AKTİF' : 'PASİF'}
@@ -648,11 +705,11 @@ function DocumentsModal({ userId, onClose }: { userId: string; onClose: () => vo
 
                     <div className="text-[11px] text-neutral-500">Yüklendi: {fmt(d.uploaded_at ?? undefined)}</div>
 
-                    <div className="flex items-center gap-2 pt-1">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-1">
                       <select
                         value={localStatus[d.document_id] ?? d.document_status}
                         onChange={(e) => setLocalStatus(s => ({ ...s, [d.document_id]: e.target.value }))}
-                        className="w-full rounded-lg border border-neutral-300 bg-neutral-50 px-2 py-1 text-sm"
+                        className="w-full min-w-0 rounded-lg border border-neutral-300 bg-neutral-50 px-2 py-1 text-sm"
                       >
                         {DOC_STATUS_OPTIONS.map(opt => (
                           <option key={opt} value={opt}>{opt}</option>
@@ -662,7 +719,7 @@ function DocumentsModal({ userId, onClose }: { userId: string; onClose: () => vo
                       <button
                         onClick={() => updateStatus(d.document_id)}
                         disabled={savingId === d.document_id}
-                        className="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white shadow hover:bg-indigo-700 disabled:opacity-50"
+                        className="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white shadow hover:bg-indigo-700 disabled:opacity-50 w-full sm:w-auto"
                       >
                         {savingId === d.document_id ? 'Kaydediliyor…' : 'Kaydet'}
                       </button>
@@ -674,8 +731,8 @@ function DocumentsModal({ userId, onClose }: { userId: string; onClose: () => vo
           )}
         </div>
 
-        <div className="flex items-center justify-end gap-2 border-t px-5 py-4">
-          <button onClick={onClose} className="rounded-xl bg-neutral-200 px-4 py-2 text-sm font-semibold text-neutral-800 hover:bg-neutral-300">
+        <div className="flex items-center justify-end gap-2 border-t px-4 sm:px-5 py-3 sm:py-4 shrink-0">
+          <button onClick={onClose} className="rounded-xl bg-neutral-200 px-4 py-2 text-sm font-semibold text-neutral-800 hover:bg-neutral-300 w-full sm:w-auto">
             Kapat
           </button>
         </div>

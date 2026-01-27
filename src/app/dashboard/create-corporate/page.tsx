@@ -180,11 +180,11 @@ export default function CreateCorporate() {
       last_name: String(fd.get("surname") || ""),
       addressLine1: String(fd.get("addressLine1") || ""),
       addressLine2: String(fd.get("addressLine2") || ""),
-      countryId: Number(fd.get("countryId") || 1),
-      stateId: Number(fd.get("stateId") || 1),
-      cityId: Number(fd.get("cityId") || 1),
+      countryId: Number(countryId || 1),
+      stateId: Number(stateId || 1),
+      cityId: Number(cityId || 1),
       tax_office: String(fd.get("tax_office") || ""),
-      tax_number: String(fd.get("tax_number") || 0),
+      tax_number: String(fd.get("tax_number") || ""),
       iban: String(fd.get("iban") || ""),
       resume: String(fd.get("resume") || ""),
     };
@@ -209,10 +209,10 @@ export default function CreateCorporate() {
   }
 
   return (
-    <div className="p-4">
+    <div className="p-3 sm:p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">
             Kurumsal Üye Oluştur
           </h1>
           <p className="text-sm text-neutral-600">
@@ -223,11 +223,11 @@ export default function CreateCorporate() {
       <form
         key={formKey}
         onSubmit={onSubmit}
-        className="space-y-4 bg-[rgb(251,231,215)] p-4 rounded-md shadow grid grid-cols-2 gap-6 mt-4"
+        className="mt-4 grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2 bg-[rgb(251,231,215)] p-3 sm:p-4 rounded-xl shadow"
       >
-        <div>
+        <div className="flex flex-col gap-4 min-w-0">
           <div className="grid place-items-center">
-            <div className="mb-6 grid h-20 w-20 place-items-center rounded-full bg-neutral-200 text-xs text-neutral-600">
+            <div className="mb-2 sm:mb-6 grid h-16 w-16 sm:h-20 sm:w-20 place-items-center rounded-full bg-neutral-200 text-[10px] sm:text-xs text-neutral-600">
               300 × 300
             </div>
           </div>
@@ -238,7 +238,7 @@ export default function CreateCorporate() {
             <input
               type="text"
               name="name"
-              className="bg-white mt-1 block w-full border border-gray-300 rounded-xl p-2"
+              className="bg-white mt-1 block w-full min-w-0 border border-gray-300 rounded-xl p-2"
               required
             />
           </div>
@@ -249,7 +249,7 @@ export default function CreateCorporate() {
             <input
               type="text"
               name="surname"
-              className="bg-white mt-1 block w-full border border-gray-300 rounded-xl p-2"
+              className="bg-white mt-1 block w-full min-w-0 border border-gray-300 rounded-xl p-2"
               required
             />
           </div>
@@ -260,12 +260,12 @@ export default function CreateCorporate() {
             <input
               type="tel"
               name="phone"
-              className="bg-white mt-1 block w-full border border-gray-300 rounded-xl p-2"
+              className="bg-white mt-1 block w-full min-w-0 border border-gray-300 rounded-xl p-2"
               placeholder="+90 5xx xxx xx xx"
               required
             />
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className="block text-sm font-medium text-gray-700">
                 E-Posta
@@ -273,7 +273,7 @@ export default function CreateCorporate() {
               <input
                 type="email"
                 name="email"
-                className="bg-white mt-1 block w-full border border-gray-300 rounded-xl p-2"
+                className="bg-white mt-1 block w-full min-w-0 border border-gray-300 rounded-xl p-2"
                 placeholder="ornek@eposta.com"
                 required
               />
@@ -283,12 +283,12 @@ export default function CreateCorporate() {
                 Şifre
               </label>
               <input
-                className="bg-white mt-1 block w-full border border-gray-300 rounded-xl p-2"
+                className="bg-white mt-1 block w-full min-w-0 border border-gray-300 rounded-xl p-2"
                 type="password"
                 name="password"
                 placeholder="••••••••"
                 required
-              ></input>
+              />
             </div>
           </div>
           <div>
@@ -297,12 +297,13 @@ export default function CreateCorporate() {
             </label>
             <textarea
               name="resume"
-              className="bg-white mt-1 block w-full border border-gray-300 rounded-xl p-2"
+              rows={3}
+              className="bg-white mt-1 block w-full min-w-0 border border-gray-300 rounded-xl p-2 resize-y"
               required
-            ></textarea>
+            />
           </div>
         </div>
-        <div>
+        <div className="flex flex-col gap-4 min-w-0">
           <div>
             <label className="block text-sm font-medium text-gray-700">
               Adres Satırı 1
@@ -310,7 +311,7 @@ export default function CreateCorporate() {
             <input
               type="text"
               name="addressLine1"
-              className="bg-white mt-1 block w-full border border-gray-300 rounded-xl shadow-sm p-2"
+              className="bg-white mt-1 block w-full min-w-0 border border-gray-300 rounded-xl shadow-sm p-2"
               placeholder="Adres satırı 1"
               required
             />
@@ -322,12 +323,12 @@ export default function CreateCorporate() {
             <input
               type="text"
               name="addressLine2"
-              className="bg-white mt-1 block w-full border border-gray-300 rounded-xl shadow-sm p-2"
+              className="bg-white mt-1 block w-full min-w-0 border border-gray-300 rounded-xl shadow-sm p-2"
               placeholder="Adres satırı 2"
             />
           </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="min-w-0">
               <label className="mb-1 block text-sm font-medium text-neutral-700">
                 Ülke
               </label>
@@ -380,7 +381,7 @@ export default function CreateCorporate() {
                   ))}
               </select>
             </div>
-            <div>
+            <div className="min-w-0">
               <label className="mb-1 block text-sm font-medium text-neutral-700">
                 Şehir/İlçe
               </label>
@@ -406,7 +407,7 @@ export default function CreateCorporate() {
               </select>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className="block text-sm font-medium text-gray-700">
                 Vergi Dairesi (tax_office)
@@ -414,7 +415,7 @@ export default function CreateCorporate() {
               <input
                 type="text"
                 name="tax_office"
-                className="bg-white mt-1 block w-full border border-gray-300 rounded-xl shadow-sm p-2"
+                className="bg-white mt-1 block w-full min-w-0 border border-gray-300 rounded-xl shadow-sm p-2"
               />
             </div>
             <div>
@@ -422,9 +423,9 @@ export default function CreateCorporate() {
                 Vergi Numarası (tax_number)
               </label>
               <input
-                type="string"
+                type="text"
                 name="tax_number"
-                className="bg-white mt-1 block w-full border border-gray-300 rounded-xl shadow-sm p-2"
+                className="bg-white mt-1 block w-full min-w-0 border border-gray-300 rounded-xl shadow-sm p-2"
               />
             </div>
           </div>
@@ -436,24 +437,24 @@ export default function CreateCorporate() {
               name="iban"
               type="text"
               placeholder="TR..."
-              className="w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 outline-none ring-2 ring-transparent transition focus:ring-sky-200"
+              className="w-full min-w-0 rounded-xl border border-neutral-300 bg-white px-3 py-2 outline-none ring-2 ring-transparent transition focus:ring-sky-200"
             />
           </div>
         </div>
         <button
           type="submit"
           disabled={saving}
-          className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 col-span-2 mt-4"
+          className="col-span-full w-full sm:w-auto sm:min-w-[140px] bg-blue-600 text-white px-4 py-2.5 rounded-xl hover:bg-blue-700 disabled:opacity-60 font-medium"
         >
-          Oluştur
+          {saving ? "Kaydediliyor…" : "Oluştur"}
         </button>
         {okMsg && (
-          <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+          <div className="col-span-full rounded-xl border border-emerald-200 bg-emerald-50 px-3 sm:px-4 py-3 text-sm text-emerald-700">
             {okMsg}
           </div>
         )}
         {errMsg && (
-          <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          <div className="col-span-full rounded-xl border border-rose-200 bg-rose-50 px-3 sm:px-4 py-3 text-sm text-rose-700">
             {errMsg}
           </div>
         )}

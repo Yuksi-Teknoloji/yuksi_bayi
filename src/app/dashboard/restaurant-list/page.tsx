@@ -464,17 +464,17 @@ export default function DealerRestaurantListPage() {
 
   /* ========== UI ========== */
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6 px-0 sm:px-0">
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Restoranlar (Bayi)</h1>
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">Restoranlar (Bayi)</h1>
           <p className="text-sm text-neutral-600">Bayinize bağlı restoranları yönetin.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => setCreateOpen((v) => !v)}
-            className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white shadow hover:bg-emerald-700"
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white shadow hover:bg-emerald-700 w-full sm:w-auto"
             title="Yeni restoran oluştur"
           >
             <Plus className="h-4 w-4" />
@@ -482,7 +482,7 @@ export default function DealerRestaurantListPage() {
           </button>
           <button
             onClick={load}
-            className="inline-flex items-center gap-2 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-sm hover:bg-neutral-50"
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-sm hover:bg-neutral-50 w-full sm:w-auto"
             title="Yenile"
           >
             <RefreshCcw className="h-4 w-4" />
@@ -493,26 +493,26 @@ export default function DealerRestaurantListPage() {
 
       {/* Notifications */}
       {(createOk || createErr) && (
-        <div className={`rounded-xl px-4 py-3 text-sm ${createOk ? 'border border-emerald-200 bg-emerald-50 text-emerald-700' : 'border border-rose-200 bg-rose-50 text-rose-700'}`}>
+        <div className={`rounded-xl px-3 sm:px-4 py-3 text-sm ${createOk ? 'border border-emerald-200 bg-emerald-50 text-emerald-700' : 'border border-rose-200 bg-rose-50 text-rose-700'}`}>
           {createOk || createErr}
         </div>
       )}
       {(bindOk || bindErr) && (
-        <div className={`rounded-xl px-4 py-3 text-sm ${bindOk ? 'border border-emerald-200 bg-emerald-50 text-emerald-700' : 'border border-rose-200 bg-rose-50 text-rose-700'}`}>
+        <div className={`rounded-xl px-3 sm:px-4 py-3 text-sm ${bindOk ? 'border border-emerald-200 bg-emerald-50 text-emerald-700' : 'border border-rose-200 bg-rose-50 text-rose-700'}`}>
           {bindOk || bindErr}
         </div>
       )}
 
       {/* === HARİTA + DETAY PANELİ === */}
-      <section className="mt-6 rounded-2xl border border-neutral-200/70 bg-white shadow-sm">
-        <div className="flex items-center gap-2 border-b px-4 py-3">
-          <MapPin className="h-4 w-4" />
+      <section className="rounded-2xl border border-neutral-200/70 bg-white shadow-sm overflow-hidden">
+        <div className="flex items-center gap-2 border-b px-3 sm:px-4 py-3">
+          <MapPin className="h-4 w-4 shrink-0" />
           <div className="font-semibold">Harita</div>
-          <span className="ml-2 text-xs text-neutral-500">({markers.length} konum)</span>
+          <span className="text-xs text-neutral-500">({markers.length} konum)</span>
         </div>
 
         <div className="grid gap-0 lg:grid-cols-[1fr,380px]">
-          <div className="p-3">
+          <div className="p-2 sm:p-3 min-h-[260px] sm:min-h-[320px]">
             <LiveLeaflet
               markers={markers}
               selectedId={selectedId}
@@ -520,8 +520,8 @@ export default function DealerRestaurantListPage() {
             />
           </div>
 
-          <aside className="border-t lg:border-l lg:border-t-0">
-            <div className="p-4">
+          <aside className="border-t lg:border-l lg:border-t-0 max-h-[50vh] lg:max-h-none overflow-y-auto">
+            <div className="p-3 sm:p-4">
               <div className="mb-2 font-semibold">Seçili Restoran</div>
 
               {!selectedId && <div className="text-sm text-neutral-500">Haritadaki bir işarete tıklayın.</div>}
@@ -534,7 +534,7 @@ export default function DealerRestaurantListPage() {
                     <div className="mt-1 grid gap-1 text-[13px]">
                       <div>E-posta: <b>{selectedFromList?.email ?? '—'}</b></div>
                       <div>Telefon: <b>{selectedFromList?.phone ?? '—'}</b></div>
-                      <div>Adres: <b>{selectedFromList?.address_line1 ?? '—'}</b></div>
+                      <div>Adres: <b className="break-words">{selectedFromList?.address_line1 ?? '—'}</b></div>
                       <div>Konum: <b>{(selectedFromList?.latitude ?? '—')}, {(selectedFromList?.longitude ?? '—')}</b></div>
                     </div>
                   </div>
@@ -555,7 +555,7 @@ export default function DealerRestaurantListPage() {
                     <div className="mt-2">
                       <button
                         onClick={() => openProfile(selectedId)}
-                        className="inline-flex items-center gap-2 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs hover:bg-neutral-50"
+                        className="inline-flex w-full sm:w-auto justify-center items-center gap-2 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs hover:bg-neutral-50"
                       >
                         <Eye className="h-4 w-4" /> Ayrıntıları Yeniden Getir
                       </button>
@@ -570,43 +570,41 @@ export default function DealerRestaurantListPage() {
 
       {/* Create & Bind */}
       {createOpen && (
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
           {/* Create */}
-          <section className="rounded-2xl border border-neutral-200/70 bg-white shadow-sm">
-            <div className="flex items-center gap-2 border-b px-4 py-3">
-              <Plus className="h-4 w-4" />
-              <div className="font-semibold">Yeni Restoran Oluştur & Bağla</div>
+          <section className="rounded-2xl border border-neutral-200/70 bg-white shadow-sm min-w-0">
+            <div className="flex items-center gap-2 border-b px-3 sm:px-4 py-3">
+              <Plus className="h-4 w-4 shrink-0" />
+              <div className="font-semibold min-w-0 truncate">Yeni Restoran Oluştur & Bağla</div>
             </div>
-            <form onSubmit={submitCreate} className="grid gap-4 p-4 text-sm">
+            <form onSubmit={submitCreate} className="grid gap-4 p-3 sm:p-4 text-sm">
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {/* form alanları */}
-                <label className="grid gap-1"><span>Restoran Adı *</span>
-                  <input required value={form.name} onChange={(e)=>setForm(f=>({...f,name:e.target.value}))} className="rounded-lg border border-neutral-300 px-3 py-2" />
+                <label className="grid gap-1 min-w-0"><span>Restoran Adı *</span>
+                  <input required value={form.name} onChange={(e)=>setForm(f=>({...f,name:e.target.value}))} className="rounded-lg border border-neutral-300 px-3 py-2 min-w-0" />
                 </label>
-                <label className="grid gap-1"><span>Yetkili Kişi *</span>
-                  <input required value={form.contactPerson} onChange={(e)=>setForm(f=>({...f,contactPerson:e.target.value}))} className="rounded-lg border border-neutral-300 px-3 py-2" />
+                <label className="grid gap-1 min-w-0"><span>Yetkili Kişi *</span>
+                  <input required value={form.contactPerson} onChange={(e)=>setForm(f=>({...f,contactPerson:e.target.value}))} className="rounded-lg border border-neutral-300 px-3 py-2 min-w-0" />
                 </label>
-                <label className="grid gap-1"><span>Telefon *</span>
-                  <input required value={form.phone} onChange={(e)=>setForm(f=>({...f,phone:e.target.value}))} className="rounded-lg border border-neutral-300 px-3 py-2" />
+                <label className="grid gap-1 min-w-0"><span>Telefon *</span>
+                  <input required value={form.phone} onChange={(e)=>setForm(f=>({...f,phone:e.target.value}))} className="rounded-lg border border-neutral-300 px-3 py-2 min-w-0" />
                 </label>
-                <label className="grid gap-1"><span>E-posta *</span>
-                  <input required type="email" value={form.email} onChange={(e)=>setForm(f=>({...f,email:e.target.value}))} className="rounded-lg border border-neutral-300 px-3 py-2" />
+                <label className="grid gap-1 min-w-0"><span>E-posta *</span>
+                  <input required type="email" value={form.email} onChange={(e)=>setForm(f=>({...f,email:e.target.value}))} className="rounded-lg border border-neutral-300 px-3 py-2 min-w-0" />
                 </label>
-                <label className="grid gap-1"><span>Şifre *</span>
-                  <input required type="password" value={form.password} onChange={(e)=>setForm(f=>({...f,password:e.target.value}))} className="rounded-lg border border-neutral-300 px-3 py-2" />
+                <label className="grid gap-1 min-w-0"><span>Şifre *</span>
+                  <input required type="password" value={form.password} onChange={(e)=>setForm(f=>({...f,password:e.target.value}))} className="rounded-lg border border-neutral-300 px-3 py-2 min-w-0" />
                 </label>
-                <label className="grid gap-1"><span>Vergi No *</span>
-                  <input required value={form.taxNumber} onChange={(e)=>setForm(f=>({...f,taxNumber:e.target.value}))} className="rounded-lg border border-neutral-300 px-3 py-2" />
+                <label className="grid gap-1 min-w-0"><span>Vergi No *</span>
+                  <input required value={form.taxNumber} onChange={(e)=>setForm(f=>({...f,taxNumber:e.target.value}))} className="rounded-lg border border-neutral-300 px-3 py-2 min-w-0" />
                 </label>
-                <label className="sm:col-span-2 grid gap-1"><span>Adres Satırı 1 *</span>
-                  <input required value={form.addresLine1} onChange={(e)=>setForm(f=>({...f,addresLine1:e.target.value}))} className="rounded-lg border border-neutral-300 px-3 py-2" />
+                <label className="sm:col-span-2 grid gap-1 min-w-0"><span>Adres Satırı 1 *</span>
+                  <input required value={form.addresLine1} onChange={(e)=>setForm(f=>({...f,addresLine1:e.target.value}))} className="rounded-lg border border-neutral-300 px-3 py-2 min-w-0" />
                 </label>
-                <label className="sm:col-span-2 grid gap-1"><span>Adres Satırı 2</span>
-                  <input value={form.addressLine2} onChange={(e)=>setForm(f=>({...f,addressLine2:e.target.value}))} className="rounded-lg border border-neutral-300 px-3 py-2" />
+                <label className="sm:col-span-2 grid gap-1 min-w-0"><span>Adres Satırı 2</span>
+                  <input value={form.addressLine2} onChange={(e)=>setForm(f=>({...f,addressLine2:e.target.value}))} className="rounded-lg border border-neutral-300 px-3 py-2 min-w-0" />
                 </label>
-                {/* Geo selects */}
-                <label className="grid gap-1"><span>Ülke *</span>
-                  <select value={form.countryId} onChange={(e)=>setForm(f=>({...f,countryId:Number(e.target.value)}))} className="rounded-lg border border-neutral-300 px-3 py-2">
+                <label className="grid gap-1 min-w-0"><span>Ülke *</span>
+                  <select value={form.countryId} onChange={(e)=>setForm(f=>({...f,countryId:Number(e.target.value)}))} className="rounded-lg border border-neutral-300 px-3 py-2 min-w-0">
                     <option value="">{countriesLoading?'Yükleniyor…':'Ülke seçin…'}</option>
                     {countriesError && <option value="">{countriesError}</option>}
                     {!countriesLoading && !countriesError && countries.map((c: Country)=> <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -619,8 +617,8 @@ export default function DealerRestaurantListPage() {
                     {!statesLoading && !statesError && states.map((s: State)=> <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>
                 </label>
-                <label className="grid gap-1"><span>Şehir *</span>
-                  <select value={form.cityId||''} onChange={(e)=>setForm(f=>({...f,cityId:Number(e.target.value)}))} disabled={!form.stateId||citiesLoading} className="rounded-lg border border-neutral-300 px-3 py-2 disabled:opacity-60">
+                <label className="grid gap-1 min-w-0"><span>Şehir *</span>
+                  <select value={form.cityId||''} onChange={(e)=>setForm(f=>({...f,cityId:Number(e.target.value)}))} disabled={!form.stateId||citiesLoading} className="rounded-lg border border-neutral-300 px-3 py-2 min-w-0 disabled:opacity-60">
                     <option value="">{citiesLoading?'Yükleniyor…':(form.stateId?'Şehir seçin…':'Önce il')}</option>
                     {citiesError && <option value="">{citiesError}</option>}
                     {!citiesLoading && !citiesError && cities.map((c: City)=> <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -628,14 +626,13 @@ export default function DealerRestaurantListPage() {
                 </label>
               </div>
 
-              {/* Map */}
-              <div className="mt-2">
+              <div className="mt-2 min-w-0">
                 <MapPicker label="Restoran Konumu (haritaya tıkla)" value={geo} onChange={(p)=>setGeo(p)} defaultCenter={{ lat: 41.015137, lng: 28.97953 }} />
                 {!geo && <p className="mt-2 text-xs text-amber-600">Konum seçilmedi.</p>}
               </div>
 
-              <div className="flex items-center gap-2 pt-2">
-                <button type="submit" disabled={creating} className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white shadow hover:bg-emerald-700 disabled:opacity-60">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-2">
+                <button type="submit" disabled={creating} className="inline-flex justify-center items-center gap-2 rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white shadow hover:bg-emerald-700 disabled:opacity-60 w-full sm:w-auto">
                   {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
                   Oluştur & Bağla
                 </button>
@@ -644,9 +641,9 @@ export default function DealerRestaurantListPage() {
             </form>
           </section>
 
-          {/* Bind existing (selectbox ile) */}
-          <section className="rounded-2xl border border-neutral-200/70 bg-white shadow-sm">
-            <div className="flex items-center justify-between gap-2 border-b px-4 py-3">
+          {/* Bind existing */}
+          <section className="rounded-2xl border border-neutral-200/70 bg-white shadow-sm min-w-0">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b px-3 sm:px-4 py-3">
               <div className="flex items-center gap-2">
                 <LinkIcon className="h-4 w-4" />
                 <div className="font-semibold">Mevcut Restoranı Bağla</div>
@@ -691,23 +688,21 @@ export default function DealerRestaurantListPage() {
                 </label>
               </div>
 
-              <div className="grid gap-2 sm:grid-cols-2">
-                <label className="grid gap-1">
-                  <span>UUID (manuel yazmak istersen)</span>
-                  <input
-                    value={bindId}
-                    onChange={(e) => setBindId(e.target.value)}
-                    className="rounded-lg border border-neutral-300 px-3 py-2"
-                    placeholder="123e4567-e89b-12d3-a456-426614174000"
-                  />
-                </label>
-              </div>
+              <label className="grid gap-1 min-w-0">
+                <span>UUID (manuel yazmak istersen)</span>
+                <input
+                  value={bindId}
+                  onChange={(e) => setBindId(e.target.value)}
+                  className="rounded-lg border border-neutral-300 px-3 py-2 min-w-0"
+                  placeholder="123e4567-e89b-12d3-a456-426614174000"
+                />
+              </label>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                 <button
                   onClick={bindExisting}
                   disabled={binding || !bindId.trim()}
-                  className="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-3 py-2 text-sm font-semibold text-white shadow hover:bg-sky-700 disabled:opacity-60"
+                  className="inline-flex justify-center items-center gap-2 rounded-lg bg-sky-600 px-3 py-2 text-sm font-semibold text-white shadow hover:bg-sky-700 disabled:opacity-60 w-full sm:w-auto"
                 >
                   {binding ? <Loader2 className="h-4 w-4 animate-spin" /> : <LinkIcon className="h-4 w-4" />}
                   Bağla
@@ -720,20 +715,20 @@ export default function DealerRestaurantListPage() {
       )}
 
       {/* List */}
-      <section className="rounded-2xl border border-neutral-200/70 bg-white shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3">
-          <div className="font-semibold">Restoran Listesi</div>
-          <div className="flex items-center gap-2">
-            <div className="relative">
+      <section className="rounded-2xl border border-neutral-200/70 bg-white shadow-sm min-w-0">
+        <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center justify-between gap-2 border-b px-3 sm:px-4 py-3">
+          <div className="font-semibold shrink-0">Restoran Listesi</div>
+          <div className="flex flex-wrap items-center gap-2 min-w-0">
+            <div className="relative flex-1 sm:flex-initial min-w-0">
               <input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 placeholder="Ara… (ad, e-posta, telefon, UUID)"
-                className="w-64 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 pl-8 text-sm outline-none focus:ring-2 focus:ring-sky-200"
+                className="w-full sm:w-64 min-w-0 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 pl-8 text-sm outline-none focus:ring-2 focus:ring-sky-200"
               />
               <Search className="pointer-events-none absolute left-2 top-1.5 h-4 w-4 text-neutral-400" />
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <button onClick={() => setOffset((o) => Math.max(0, o - (limit || 20)))} className="rounded-lg border border-neutral-300 bg-white p-1.5 hover:bg-neutral-50" title="Geri">
                 <ChevronLeft className="h-4 w-4" />
               </button>
@@ -741,29 +736,30 @@ export default function DealerRestaurantListPage() {
               <button onClick={() => setOffset((o) => o + (limit || 20))} className="rounded-lg border border-neutral-300 bg-white p-1.5 hover:bg-neutral-50" title="İleri">
                 <ChevronRight className="h-4 w-4" />
               </button>
-              <select value={limit} onChange={(e) => { setOffset(0); setLimit(Number(e.target.value)); }} className="rounded-lg border border-neutral-300 bg-white px-2 py-1.5 text-sm" title="Sayfa boyutu">
+              <select value={limit} onChange={(e) => { setOffset(0); setLimit(Number(e.target.value)); }} className="rounded-lg border border-neutral-300 bg-white px-2 py-1.5 text-sm min-w-0" title="Sayfa boyutu">
                 {[10, 20, 50, 100, 200].map((n: number) => <option key={n} value={n}>{n}</option>)}
               </select>
             </div>
           </div>
         </div>
 
-        <div className="max-h-[520px] overflow-auto">
+        {/* Masaüstü: tablo */}
+        <div className="hidden md:block max-h-[520px] overflow-auto">
           <table className="min-w-full">
             <thead>
               <tr className="text-left text-xs text-neutral-500">
-                <th className="px-4 py-2">Ad</th>
-                <th className="px-4 py-2">İletişim</th>
-                <th className="px-4 py-2">Adres</th>
-                <th className="px-4 py-2">Saatler</th>
-                <th className="px-4 py-2">Oluşturma</th>
-                <th className="px-4 py-2 w-40">İşlem</th>
+                <th className="px-3 sm:px-4 py-2">Ad</th>
+                <th className="px-3 sm:px-4 py-2">İletişim</th>
+                <th className="px-3 sm:px-4 py-2">Adres</th>
+                <th className="px-3 sm:px-4 py-2">Saatler</th>
+                <th className="px-3 sm:px-4 py-2">Oluşturma</th>
+                <th className="px-3 sm:px-4 py-2 w-40">İşlem</th>
               </tr>
             </thead>
             <tbody>
               {rowsFiltered.map((r: RestaurantRow) => (
                 <tr key={r.id} className="border-t text-sm">
-                  <td className="px-4 py-2">
+                  <td className="px-3 sm:px-4 py-2">
                     <div className="font-medium">{r.name}</div>
                     <div className="text-[11px] text-neutral-500">{r.id}</div>
                   </td>
@@ -811,37 +807,84 @@ export default function DealerRestaurantListPage() {
               ))}
               {rowsFiltered.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-6 text-center text-sm text-neutral-500">Kayıt yok.</td>
+                  <td colSpan={6} className="px-3 sm:px-4 py-6 text-center text-sm text-neutral-500">Kayıt yok.</td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
-        {loading && <div className="px-4 py-2 text-xs text-neutral-500">Yükleniyor…</div>}
-        {error && <div className="m-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>}
+
+        {/* Mobil: kart listesi */}
+        <div className="md:hidden max-h-[520px] overflow-auto divide-y divide-neutral-200/70">
+          {loading && <div className="px-4 py-10 text-center text-sm text-neutral-500">Yükleniyor…</div>}
+          {!loading && rowsFiltered.length === 0 && (
+            <div className="px-4 py-12 text-center text-sm text-neutral-500">Kayıt yok.</div>
+          )}
+          {!loading &&
+            rowsFiltered.map((r: RestaurantRow) => (
+              <div key={r.id} className="p-4">
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[11px] text-neutral-400 font-mono">{r.id}</div>
+                      <div className="font-medium text-neutral-900">{r.name}</div>
+                      <div className="text-sm text-neutral-600">{r.email || '—'}</div>
+                      <div className="text-sm text-neutral-600">{r.phone || '—'}</div>
+                    </div>
+                  </div>
+                  <div className="text-xs text-neutral-500 line-clamp-2">
+                    {r.address_line1 || '—'}
+                    {[r.city_name, r.state_name, r.country_name].filter(Boolean).length ? ` • ${[r.city_name, r.state_name, r.country_name].filter(Boolean).join(', ')}` : ''}
+                  </div>
+                  <div className="text-xs text-neutral-500">
+                    {(r.opening_hour || r.closing_hour) ? `${r.opening_hour ?? '—'} / ${r.closing_hour ?? '—'}` : '—'}
+                    {' • '}{fmtDT(r.created_at)}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                    <button onClick={() => setSelectedId(r.id)} className="inline-flex items-center gap-1 rounded-lg border border-neutral-300 bg-white px-2 py-1.5 text-xs hover:bg-neutral-50">
+                      <MapPin className="h-3 w-3" /> Haritada
+                    </button>
+                    <button onClick={() => openProfile(r.id)} className="inline-flex items-center gap-1 rounded-lg border border-neutral-300 bg-white px-2 py-1.5 text-xs hover:bg-neutral-50">
+                      <Eye className="h-3 w-3" /> Profil
+                    </button>
+                    <button onClick={() => setPackageModalRow(r)} className="inline-flex items-center gap-1 rounded-lg border border-neutral-300 bg-white px-2 py-1.5 text-xs hover:bg-neutral-50">
+                      Paket
+                    </button>
+                    <button onClick={() => unbind(r.id)} disabled={removingId === r.id} className="inline-flex items-center gap-1 rounded-lg bg-rose-600 px-2 py-1.5 text-xs font-semibold text-white shadow hover:bg-rose-700 disabled:opacity-60">
+                      {removingId === r.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+                      Kaldır
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+        </div>
+
+        {loading && <div className="px-3 sm:px-4 py-2 text-xs text-neutral-500">Yükleniyor…</div>}
+        {error && <div className="m-3 sm:m-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>}
       </section>
 
       {/* Profile Modal (restoran kimliği) */}
       {profileId && (
         <div
-          className="fixed inset-0 z-[2000] grid place-items-center bg-black/40 p-4"
+          className="fixed inset-0 z-[2000] grid place-items-start sm:place-items-center bg-black/40 p-3 sm:p-4 overflow-y-auto py-6 sm:py-4"
           onClick={() => setProfileId(null)}
         >
           <div
-            className="max-h-[80vh] w-full max-w-3xl overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-xl"
+            className="w-full max-w-3xl max-h-[calc(100vh-3rem)] overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-xl flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b px-4 py-3">
-              <div className="font-semibold">Restoran Kimliği</div>
+            <div className="flex items-center justify-between border-b px-3 sm:px-4 py-3 shrink-0">
+              <div className="font-semibold min-w-0 truncate">Restoran Kimliği</div>
               <button
                 onClick={() => setProfileId(null)}
-                className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-sm hover:bg-neutral-50"
+                className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-sm hover:bg-neutral-50 shrink-0"
               >
                 Kapat
               </button>
             </div>
 
-            <div className="p-4">
+            <div className="p-3 sm:p-4 overflow-y-auto flex-1 min-h-0">
               {profileLoading && (
                 <div className="text-sm text-neutral-500">
                   <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />
@@ -997,24 +1040,24 @@ export default function DealerRestaurantListPage() {
       {/* Paket Bilgisi Modalı */}
       {packageModalRow && (
         <div
-          className="fixed inset-0 z-[2000] grid place-items-center bg-black/40 p-4"
+          className="fixed inset-0 z-[2000] grid place-items-start sm:place-items-center bg-black/40 p-3 sm:p-4 overflow-y-auto py-6 sm:py-4"
           onClick={() => setPackageModalRow(null)}
         >
           <div
-            className="w-full max-w-md rounded-2xl border border-neutral-200 bg-white shadow-xl"
+            className="w-full max-w-md max-h-[calc(100vh-3rem)] overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-xl flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b px-4 py-3">
-              <div className="font-semibold">Paket Bilgisi</div>
+            <div className="flex items-center justify-between border-b px-3 sm:px-4 py-3 shrink-0">
+              <div className="font-semibold min-w-0 truncate">Paket Bilgisi</div>
               <button
                 onClick={() => setPackageModalRow(null)}
-                className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-sm hover:bg-neutral-50"
+                className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-sm hover:bg-neutral-50 shrink-0"
               >
                 Kapat
               </button>
             </div>
 
-            <div className="p-4 space-y-4 text-sm">
+            <div className="p-3 sm:p-4 space-y-4 text-sm overflow-y-auto flex-1 min-h-0">
               <div className="rounded-xl bg-neutral-50 p-3">
                 <div className="text-[11px] uppercase tracking-wide text-neutral-500">
                   Restoran

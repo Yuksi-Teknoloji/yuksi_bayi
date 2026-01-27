@@ -37,13 +37,14 @@ export function ChartPie({ data, title }: { data: Record<string, number>; title:
     }));
 
   return (
-    <div className="w-full max-w-[500px] h-[300px] bg-white rounded-md shadow">
-      <div className="flex justify-between">
-        <span className=" p-1">{title}</span>
-        <span className="bg-gray-100 p-1 rounded">Toplam: {data.total}</span>
+    <div className="w-full max-w-[500px] h-[250px] sm:h-[300px] min-h-[200px] bg-white rounded-md shadow flex flex-col">
+      <div className="flex flex-wrap justify-between items-center gap-2 p-1 shrink-0">
+        <span className="text-sm font-medium">{title}</span>
+        <span className="bg-gray-100 px-2 py-1 rounded text-sm">Toplam: {data.total}</span>
       </div>
-      <ResponsiveContainer width="100%" height="100%">
-        <PieChart>
+      <div className="flex-1 min-h-0">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart margin={{ top: 4, right: 4, bottom: 4, left: 4 }}>
           <Pie
             data={chart_data}
             dataKey="value"
@@ -63,7 +64,8 @@ export function ChartPie({ data, title }: { data: Record<string, number>; title:
           />
           <Legend formatter={(name) => TypeTR[name as keyof typeof TypeTR] ?? name}></Legend>
         </PieChart>
-      </ResponsiveContainer>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 }

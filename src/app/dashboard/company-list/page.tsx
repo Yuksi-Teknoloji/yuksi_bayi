@@ -414,18 +414,18 @@ export default function CompanyListPage() {
   /* ================= UI ================= */
 
   return (
-    <div className="min-h-screen bg-white px-4 py-4">
+    <div className="min-h-screen bg-white px-3 sm:px-4 py-4">
       {/* Header */}
-      <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Şirket Listesi</h1>
+      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">Şirket Listesi</h1>
           <p className="text-sm text-neutral-600">
             Bayinize bağlı tüm şirketleri görüntüleyebilir ve güncelleyebilirsiniz.
           </p>
         </div>
         <button
           onClick={() => fetchCompanies()}
-          className="mt-2 inline-flex items-center gap-2 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-800 shadow-sm hover:bg-neutral-50"
+          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-800 shadow-sm hover:bg-neutral-50 w-full sm:w-auto"
         >
           <RefreshCcw className="h-4 w-4" />
           Listeyi Yenile
@@ -454,39 +454,40 @@ export default function CompanyListPage() {
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,4fr)_minmax(0,2fr)]">
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-[minmax(0,4fr)_minmax(0,2fr)]">
         {/* ========== Left: table ========== */}
-        <section className="rounded-2xl border border-neutral-200/70 bg-white shadow-sm">
-          <div className="flex items-center justify-between border-b px-4 py-3">
-            <div className="font-semibold">Şirketlerim</div>
-            <div className="flex items-center gap-2">
+        <section className="min-w-0 rounded-2xl border border-neutral-200/70 bg-white shadow-sm">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b px-3 sm:px-4 py-3">
+            <div className="font-semibold shrink-0">Şirketlerim</div>
+            <div className="flex items-center gap-2 min-w-0">
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="İsim, takip no, telefon…"
-                className="w-48 rounded-lg border border-neutral-300 px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-orange-500"
+                className="min-w-0 flex-1 sm:w-48 rounded-lg border border-neutral-300 px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-orange-500"
               />
-              {listLoading && <Loader2 className="h-4 w-4 animate-spin text-neutral-500" />}
+              {listLoading && <Loader2 className="h-4 w-4 shrink-0 animate-spin text-neutral-500" />}
             </div>
           </div>
 
-          <div className="max-h-[520px] overflow-auto text-sm">
+          {/* Masaüstü: tablo */}
+          <div className="hidden md:block max-h-[520px] overflow-auto text-sm">
             <table className="min-w-full border-collapse text-left">
               <thead className="sticky top-0 bg-neutral-50 text-xs uppercase tracking-wide text-neutral-500">
                 <tr>
-                  <th className="border-b border-neutral-200 px-3 py-2">Takip No</th>
-                  <th className="border-b border-neutral-200 px-3 py-2">Şirket Adı</th>
-                  <th className="border-b border-neutral-200 px-3 py-2">Telefon</th>
-                  <th className="border-b border-neutral-200 px-3 py-2">Komisyon (%)</th>
-                  <th className="border-b border-neutral-200 px-3 py-2">Km</th>
-                  <th className="border-b border-neutral-200 px-3 py-2">Durum</th>
-                  <th className="border-b border-neutral-200 px-3 py-2"></th>
+                  <th className="border-b border-neutral-200 px-3 sm:px-4 py-2">Takip No</th>
+                  <th className="border-b border-neutral-200 px-3 sm:px-4 py-2">Şirket Adı</th>
+                  <th className="border-b border-neutral-200 px-3 sm:px-4 py-2">Telefon</th>
+                  <th className="border-b border-neutral-200 px-3 sm:px-4 py-2">Komisyon (%)</th>
+                  <th className="border-b border-neutral-200 px-3 sm:px-4 py-2">Km</th>
+                  <th className="border-b border-neutral-200 px-3 sm:px-4 py-2">Durum</th>
+                  <th className="border-b border-neutral-200 px-3 sm:px-4 py-2"></th>
                 </tr>
               </thead>
               <tbody>
                 {filteredCompanies.length === 0 && !listLoading && (
                   <tr>
-                    <td colSpan={7} className="px-3 py-4 text-center text-xs text-neutral-500">
+                    <td colSpan={7} className="px-3 sm:px-4 py-4 text-center text-xs text-neutral-500">
                       Kayıt bulunamadı.
                     </td>
                   </tr>
@@ -499,12 +500,12 @@ export default function CompanyListPage() {
                     }`}
                     onClick={() => setSelectedId(c.id)}
                   >
-                    <td className="px-3 py-2 text-xs font-mono">{c.companyTrackingNo}</td>
-                    <td className="px-3 py-2">{c.companyName}</td>
-                    <td className="px-3 py-2">{c.companyPhone}</td>
-                    <td className="px-3 py-2">{c.specialCommissionRate != null ? c.specialCommissionRate : '—'}</td>
-                    <td className="px-3 py-2">{c.assignedKilometers != null ? c.assignedKilometers : '—'}</td>
-                    <td className="px-3 py-2">
+                    <td className="px-3 sm:px-4 py-2 text-xs font-mono">{c.companyTrackingNo}</td>
+                    <td className="px-3 sm:px-4 py-2">{c.companyName}</td>
+                    <td className="px-3 sm:px-4 py-2">{c.companyPhone}</td>
+                    <td className="px-3 sm:px-4 py-2">{c.specialCommissionRate != null ? c.specialCommissionRate : '—'}</td>
+                    <td className="px-3 sm:px-4 py-2">{c.assignedKilometers != null ? c.assignedKilometers : '—'}</td>
+                    <td className="px-3 sm:px-4 py-2">
                       <span
                         className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
                           (c.status ?? '').toLowerCase() === 'active'
@@ -515,8 +516,8 @@ export default function CompanyListPage() {
                         {c.status || '—'}
                       </span>
                     </td>
-                    <td className="px-3 py-2 text-right">
-                      <div className="inline-flex items-center gap-2">
+                    <td className="px-3 sm:px-4 py-2 text-right">
+                      <div className="inline-flex flex-wrap items-center justify-end gap-2">
                         <button
                           type="button"
                           className="inline-flex items-center gap-1 rounded-lg border border-neutral-300 bg-white px-2 py-1 text-xs hover:bg-neutral-50"
@@ -528,8 +529,6 @@ export default function CompanyListPage() {
                           <Pencil className="h-3 w-3" />
                           Düzenle
                         </button>
-
-                        {/* ✅ NEW: Yönetici Ekle */}
                         <button
                           type="button"
                           className="inline-flex items-center gap-1 rounded-lg bg-orange-600 px-2 py-1 text-xs font-semibold text-white shadow hover:bg-orange-700 disabled:opacity-60"
@@ -550,12 +549,83 @@ export default function CompanyListPage() {
             </table>
           </div>
 
+          {/* Mobil: kart listesi */}
+          <div className="md:hidden max-h-[520px] overflow-auto divide-y divide-neutral-200/70">
+            {listLoading && (
+              <div className="px-4 py-10 text-center text-sm text-neutral-500">Yükleniyor…</div>
+            )}
+            {!listLoading && filteredCompanies.length === 0 && (
+              <div className="px-4 py-12 text-center text-sm text-neutral-500">Kayıt bulunamadı.</div>
+            )}
+            {!listLoading &&
+              filteredCompanies.map((c) => (
+                <div
+                  key={c.id}
+                  className={`p-4 cursor-pointer ${
+                    selectedId === c.id ? 'bg-orange-50/80' : 'hover:bg-orange-50/40'
+                  }`}
+                  onClick={() => setSelectedId(c.id)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => e.key === 'Enter' && setSelectedId(c.id)}
+                >
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[11px] text-neutral-400 font-mono">{c.companyTrackingNo}</div>
+                        <div className="font-medium text-neutral-900">{c.companyName}</div>
+                        <div className="text-sm text-neutral-600">{c.companyPhone}</div>
+                      </div>
+                      <span
+                        className={`shrink-0 inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+                          (c.status ?? '').toLowerCase() === 'active'
+                            ? 'bg-emerald-50 text-emerald-700'
+                            : 'bg-neutral-100 text-neutral-700'
+                        }`}
+                      >
+                        {c.status || '—'}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-neutral-500">
+                      <span>Komisyon: {c.specialCommissionRate != null ? c.specialCommissionRate : '—'}</span>
+                      <span>Km: {c.assignedKilometers != null ? c.assignedKilometers : '—'}</span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1 rounded-lg border border-neutral-300 bg-white px-2 py-1.5 text-xs hover:bg-neutral-50"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedId(c.id);
+                        }}
+                      >
+                        <Pencil className="h-3 w-3" />
+                        Düzenle
+                      </button>
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1 rounded-lg bg-orange-600 px-2 py-1.5 text-xs font-semibold text-white shadow hover:bg-orange-700 disabled:opacity-60"
+                        disabled={!c.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedId(c.id);
+                          setAddOpen(true);
+                        }}
+                      >
+                        + Yönetici Ekle
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+          </div>
+
           {/* Pagination */}
-          <div className="flex items-center justify-between border-t px-4 py-2 text-xs text-neutral-600">
-            <div>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-t px-3 sm:px-4 py-2 text-xs text-neutral-600">
+            <div className="text-center sm:text-left">
               Offset: {offset} • Gösterilen: {filteredCompanies.length}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center justify-center sm:justify-end gap-2">
               <button
                 disabled={offset === 0 || listLoading}
                 onClick={() => setOffset((o) => Math.max(0, o - limit))}
@@ -575,10 +645,10 @@ export default function CompanyListPage() {
         </section>
 
         {/* ========== Right: detail & edit ========== */}
-        <section className="rounded-2xl border border-neutral-200/70 bg-white shadow-sm">
-          <div className="flex items-center gap-2 border-b px-4 py-3">
-            <Eye className="h-4 w-4" />
-            <div className="font-semibold">Şirket Detayı &amp; Güncelle</div>
+        <section className="min-w-0 rounded-2xl border border-neutral-200/70 bg-white shadow-sm">
+          <div className="flex items-center gap-2 border-b px-3 sm:px-4 py-3">
+            <Eye className="h-4 w-4 shrink-0" />
+            <div className="font-semibold min-w-0 truncate">Şirket Detayı &amp; Güncelle</div>
           </div>
 
           {!selectedId && (
@@ -715,7 +785,7 @@ export default function CompanyListPage() {
                       />
                     </label>
 
-                    <div className="mt-2 flex items-center justify-between">
+                    <div className="mt-2 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3">
                       <div className="text-[11px] text-neutral-500">
                         {detail?.createdAt && <div>Oluşturma: {detail.createdAt}</div>}
                         {detail?.updatedAt && <div>Son Güncelleme: {detail.updatedAt}</div>}
@@ -723,7 +793,7 @@ export default function CompanyListPage() {
                       <button
                         type="submit"
                         disabled={saving}
-                        className="inline-flex items-center gap-2 rounded-lg bg-orange-600 px-4 py-1.5 text-sm font-semibold text-white shadow hover:bg-orange-700 disabled:opacity-60"
+                        className="inline-flex w-full sm:w-auto justify-center items-center gap-2 rounded-lg bg-orange-600 px-4 py-1.5 text-sm font-semibold text-white shadow hover:bg-orange-700 disabled:opacity-60"
                       >
                         {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Pencil className="h-4 w-4" />}
                         Kaydet
@@ -734,9 +804,9 @@ export default function CompanyListPage() {
               </form>
 
               {/* ===== Managers panel (right side) ===== */}
-              <div className="border-t border-neutral-200/70 p-4">
-                <div className="mb-3 flex items-center justify-between gap-2">
-                  <div>
+              <div className="border-t border-neutral-200/70 p-3 sm:p-4">
+                <div className="mb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <div className="min-w-0">
                     <div className="text-sm font-semibold text-neutral-900">Şirket Yöneticileri</div>
                     <div className="text-xs text-neutral-500">Seçili şirket için yöneticileri yönet</div>
                   </div>
@@ -744,24 +814,24 @@ export default function CompanyListPage() {
                     type="button"
                     onClick={() => setAddOpen(true)}
                     disabled={!selectedId}
-                    className="rounded-xl bg-orange-600 px-3 py-2 text-xs font-semibold text-white shadow hover:bg-orange-700 disabled:opacity-60"
+                    className="w-full sm:w-auto shrink-0 rounded-xl bg-orange-600 px-3 py-2 text-xs font-semibold text-white shadow hover:bg-orange-700 disabled:opacity-60"
                   >
                     Yeni Yönetici
                   </button>
                 </div>
 
-                <div className="mb-3 flex items-center gap-2">
+                <div className="mb-3 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                   <input
                     value={managersQ}
                     onChange={(e) => setManagersQ(e.target.value)}
                     placeholder="Ad Soyad, e-posta, telefon…"
-                    className="w-full rounded-xl border border-neutral-300 bg-neutral-100 px-3 py-2 text-xs text-neutral-800 outline-none ring-2 ring-transparent transition placeholder:text-neutral-400 focus:bg-white focus:ring-sky-200"
+                    className="min-w-0 flex-1 rounded-xl border border-neutral-300 bg-neutral-100 px-3 py-2 text-xs text-neutral-800 outline-none ring-2 ring-transparent transition placeholder:text-neutral-400 focus:bg-white focus:ring-sky-200"
                   />
                   <button
                     type="button"
                     onClick={loadManagers}
                     disabled={!selectedId}
-                    className="shrink-0 rounded-xl border px-3 py-2 text-xs hover:bg-neutral-50 disabled:opacity-50"
+                    className="shrink-0 rounded-xl border px-3 py-2 text-xs hover:bg-neutral-50 disabled:opacity-50 w-full sm:w-auto"
                   >
                     Yükle
                   </button>
@@ -773,21 +843,21 @@ export default function CompanyListPage() {
                   </div>
                 )}
 
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto -mx-3 sm:-mx-4 px-3 sm:px-4">
                   <table className="min-w-full border-t border-neutral-200/70 text-sm">
                     <thead>
                       <tr className="text-left text-xs text-neutral-500">
-                        <th className="px-3 py-2 font-medium">Ad Soyad</th>
-                        <th className="px-3 py-2 font-medium">E-posta</th>
-                        <th className="px-3 py-2 font-medium">Telefon</th>
-                        <th className="px-3 py-2 font-medium">Oluşturma</th>
-                        <th className="px-3 py-2 font-medium w-[160px]"></th>
+                        <th className="px-2 sm:px-3 py-2 font-medium">Ad Soyad</th>
+                        <th className="px-2 sm:px-3 py-2 font-medium">E-posta</th>
+                        <th className="px-2 sm:px-3 py-2 font-medium">Telefon</th>
+                        <th className="px-2 sm:px-3 py-2 font-medium">Oluşturma</th>
+                        <th className="px-2 sm:px-3 py-2 font-medium w-[140px] sm:w-[160px]"></th>
                       </tr>
                     </thead>
                     <tbody>
                       {managersLoading && (
                         <tr>
-                          <td colSpan={5} className="px-3 py-6 text-center text-xs text-neutral-500">
+                          <td colSpan={5} className="px-2 sm:px-3 py-6 text-center text-xs text-neutral-500">
                             Yükleniyor…
                           </td>
                         </tr>
@@ -795,7 +865,7 @@ export default function CompanyListPage() {
 
                       {!managersLoading && filteredManagers.length === 0 && (
                         <tr>
-                          <td colSpan={5} className="px-3 py-6 text-center text-xs text-neutral-500">
+                          <td colSpan={5} className="px-2 sm:px-3 py-6 text-center text-xs text-neutral-500">
                             Yönetici kaydı bulunamadı.
                           </td>
                         </tr>
@@ -804,15 +874,15 @@ export default function CompanyListPage() {
                       {!managersLoading &&
                         filteredManagers.map((r) => (
                           <tr key={r.id} className="border-t border-neutral-200/70 align-top hover:bg-neutral-50">
-                            <td className="px-3 py-2">
+                            <td className="px-2 sm:px-3 py-2">
                               <div className="font-semibold text-neutral-900">{r.nameSurname || '-'}</div>
                               <div className="text-[11px] text-neutral-500">#{r.id}</div>
                             </td>
-                            <td className="px-3 py-2">{r.email || '-'}</td>
-                            <td className="px-3 py-2">{r.phone || '-'}</td>
-                            <td className="px-3 py-2">{r.createdAt || '-'}</td>
-                            <td className="px-3 py-2">
-                              <div className="flex items-center justify-end gap-2">
+                            <td className="px-2 sm:px-3 py-2 break-all">{r.email || '-'}</td>
+                            <td className="px-2 sm:px-3 py-2">{r.phone || '-'}</td>
+                            <td className="px-2 sm:px-3 py-2">{r.createdAt || '-'}</td>
+                            <td className="px-2 sm:px-3 py-2">
+                              <div className="flex flex-wrap items-center justify-end gap-2">
                                 <button
                                   type="button"
                                   onClick={() => setEditRow(r)}
@@ -899,16 +969,16 @@ function ManagerModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4" role="dialog" aria-modal="true">
-      <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-xl">
-        <div className="flex items-center justify-between border-b px-5 py-4">
-          <h3 className="text-lg font-semibold">{title}</h3>
-          <button className="rounded-full p-2 hover:bg-neutral-100" onClick={onClose} aria-label="Kapat">
+    <div className="fixed inset-0 z-[200] grid place-items-start sm:place-items-center bg-black/40 p-3 sm:p-4 overflow-y-auto py-6 sm:py-4" role="dialog" aria-modal="true">
+      <div className="w-full max-w-lg max-h-[calc(100vh-3rem)] overflow-hidden rounded-2xl bg-white shadow-xl flex flex-col">
+        <div className="flex items-center justify-between border-b px-4 sm:px-5 py-3 sm:py-4 shrink-0">
+          <h3 className="text-lg font-semibold min-w-0 truncate">{title}</h3>
+          <button className="rounded-full p-2 hover:bg-neutral-100 shrink-0" onClick={onClose} aria-label="Kapat">
             ✕
           </button>
         </div>
 
-        <form onSubmit={save} className="space-y-4 p-5">
+        <form onSubmit={save} className="space-y-4 p-4 sm:p-5 overflow-y-auto flex-1 min-h-0">
           <div>
             <div className="mb-1 text-sm font-medium text-neutral-700">Ad Soyad</div>
             <input
@@ -951,18 +1021,18 @@ function ManagerModal({
             />
           </div>
 
-          <div className="mt-2 flex items-center justify-end gap-3">
+          <div className="mt-2 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl bg-neutral-200 px-4 py-2 text-sm font-semibold text-neutral-800 hover:bg-neutral-300"
+              className="rounded-xl bg-neutral-200 px-4 py-2 text-sm font-semibold text-neutral-800 hover:bg-neutral-300 w-full sm:w-auto"
             >
               İptal
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-700 disabled:opacity-60"
+              className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-700 disabled:opacity-60 w-full sm:w-auto"
             >
               {saving ? 'Kaydediliyor…' : 'Kaydet'}
             </button>

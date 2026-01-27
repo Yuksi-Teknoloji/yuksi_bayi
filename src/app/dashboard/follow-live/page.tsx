@@ -143,14 +143,14 @@ export default function DealerFollowLivePage() {
     <div className="space-y-6">
       {/* Başlık */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Canlı Takip (Bayinin Restoranları)</h1>
-          <p className="text-sm text-neutral-600">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">Canlı Takip (Bayinin Restoranları)</h1>
+          <p className="mt-1 text-sm text-neutral-600">
             Restoran seç ve kuryelerin anlık GPS konumlarını haritada izle.
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <label className="text-sm flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 shrink-0">
+          <label className="text-sm flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"
               checked={auto}
@@ -164,7 +164,7 @@ export default function DealerFollowLivePage() {
             className="inline-flex items-center gap-2 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-sm hover:bg-neutral-50"
             title="Yenile"
           >
-            <RefreshCcw className="h-4 w-4" />
+            <RefreshCcw className="h-4 w-4 shrink-0" />
             Yenile
           </button>
         </div>
@@ -178,11 +178,11 @@ export default function DealerFollowLivePage() {
       )}
 
       {/* Kontroller */}
-      <section className="rounded-2xl border border-neutral-200/70 bg-white shadow-sm">
-        <div className="flex items-center gap-2 border-b px-4 py-3">
-          <MapPin className="h-4 w-4" />
-          <div className="font-semibold">Restoran & Harita</div>
-          <span className="ml-2 text-xs text-neutral-500">
+      <section className="rounded-2xl border border-neutral-200/70 bg-white shadow-sm overflow-hidden">
+        <div className="flex flex-wrap items-center gap-2 border-b px-3 sm:px-4 py-2 sm:py-3">
+          <MapPin className="h-4 w-4 shrink-0" />
+          <div className="font-semibold min-w-0">Restoran & Harita</div>
+          <span className="text-xs text-neutral-500 shrink-0">
             {markers.length ? `• ${markers.length} kurye` : '• kurye yok'}
           </span>
         </div>
@@ -190,14 +190,14 @@ export default function DealerFollowLivePage() {
         <div className="grid gap-0 lg:grid-cols-[360px,1fr]">
           {/* Sol panel: restoran seçimi */}
           <aside className="border-b lg:border-b-0 lg:border-r">
-            <div className="p-4 space-y-3">
+            <div className="p-3 sm:p-4 space-y-3">
               <label className="grid gap-1 text-sm">
                 <span className="font-medium">Restoran</span>
                 <select
                   value={restaurantId}
                   onChange={(e) => setRestaurantId(e.target.value)}
                   disabled={listLoading}
-                  className="rounded-lg border border-neutral-300 px-3 py-2"
+                  className="w-full min-w-0 rounded-lg border border-neutral-300 px-3 py-2"
                 >
                   <option value="">{listLoading ? 'Yükleniyor…' : 'Seçin…'}</option>
                   {!listLoading && restaurants.map((r) => (
@@ -211,16 +211,16 @@ export default function DealerFollowLivePage() {
               <button
                 onClick={loadLive}
                 disabled={!restaurantId || liveLoading}
-                className="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-3 py-2 text-sm font-semibold text-white shadow hover:bg-sky-700 disabled:opacity-60"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg bg-sky-600 px-3 py-2 text-sm font-semibold text-white shadow hover:bg-sky-700 disabled:opacity-60"
               >
-                {liveLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCcw className="h-4 w-4" />}
+                {liveLoading ? <Loader2 className="h-4 w-4 animate-spin shrink-0" /> : <RefreshCcw className="h-4 w-4 shrink-0" />}
                 Canlı Konumları Getir
               </button>
             </div>
           </aside>
 
           {/* Harita */}
-          <div className="p-3">
+          <div className="min-w-0 p-2 sm:p-3">
             <LiveLeaflet
               markers={markers}
               selectedId={null}

@@ -213,23 +213,23 @@ export default function DealerLogisticsTrackingPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-wrap items-end justify-between gap-3">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Yük Listesi (Bayi)</h1>
-          <p className="text-sm text-neutral-600">Kendi oluşturduğun yükleri görüntüle, düzenle veya sil.</p>
+          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">Yük Listesi (Bayi)</h1>
+          <p className="mt-1 text-sm text-neutral-600">Kendi oluşturduğun yükleri görüntüle, düzenle veya sil.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <input
             type="number" min={1}
-            className="w-28 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-sky-200"
+            className="w-20 sm:w-28 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-sky-200"
             value={limit} onChange={(e) => setLimit(e.target.value === '' ? '' : Number(e.target.value))}
-            placeholder="limit" title="limit"
+            placeholder="limit" title="limit" aria-label="Limit"
           />
           <input
             type="number" min={0}
-            className="w-28 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-sky-200"
+            className="w-20 sm:w-28 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-sky-200"
             value={offset} onChange={(e) => setOffset(e.target.value === '' ? '' : Number(e.target.value))}
-            placeholder="offset" title="offset"
+            placeholder="offset" title="offset" aria-label="Offset"
           />
           <button onClick={loadList} className="rounded-xl border border-neutral-300 bg-white px-4 py-2 text-sm hover:bg-neutral-50">
             Yenile
@@ -240,9 +240,9 @@ export default function DealerLogisticsTrackingPage() {
       {ok && <div className="rounded-md bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{ok}</div>}
       {error && <div className="rounded-md bg-rose-50 px-4 py-3 text-sm text-rose-700 whitespace-pre-line">{error}</div>}
 
-      {/* Table */}
+      {/* Masaüstü: tablo */}
       <section className="rounded-2xl border border-neutral-200 bg-white shadow-sm">
-        <div className="overflow-x-auto">
+        <div className="hidden md:block overflow-x-auto">
           <table className="min-w-full table-fixed">
             <thead>
               <tr className="text-left text-xs text-neutral-500">
@@ -258,7 +258,14 @@ export default function DealerLogisticsTrackingPage() {
               </tr>
             </thead>
             <tbody>
-              {rows.map((r) => (
+              {loading && (
+                <tr>
+                  <td colSpan={9} className="px-6 py-10 text-center text-sm text-neutral-500">
+                    Yükleniyor…
+                  </td>
+                </tr>
+              )}
+              {!loading && rows.map((r) => (
                 <tr key={r.id} className="border-t text-sm">
                   <td className="px-6 py-3">{r.id}</td>
                   <td className="px-6 py-3">
@@ -298,7 +305,8 @@ export default function DealerLogisticsTrackingPage() {
                   </td>
                 </tr>
               ))}
-              {rows.length === 0 && !loading && (
+
+              {!loading && rows.length === 0 && (
                 <tr>
                   <td colSpan={9} className="px-6 py-10 text-center text-sm text-neutral-500">Kayıt bulunamadı.</td>
                 </tr>
@@ -306,7 +314,64 @@ export default function DealerLogisticsTrackingPage() {
             </tbody>
           </table>
         </div>
-        {loading && <div className="px-6 py-3 text-sm text-neutral-500">Yükleniyor…</div>}
+
+        {/* Mobil: kart listesi */}
+        <div className="md:hidden divide-y divide-neutral-200">
+          {loading && <div className="px-4 py-10 text-center text-sm text-neutral-500">Yükleniyor…</div>}
+
+          {!loading && rows.length === 0 && (
+            <div className="px-4 py-12 text-center text-sm text-neutral-500">Kayıt bulunamadı.</div>
+          )}
+
+          {!loading &&
+            rows.map((r) => (
+              <div key={r.id} className="p-4 hover:bg-neutral-50">
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[11px] text-neutral-400">#{r.id}</div>
+                      <div className="text-neutral-900 font-medium line-clamp-1">{r.pickupAddress}</div>
+                      <div className="text-sm text-neutral-600 line-clamp-1">→ {r.dropoffAddress}</div>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <span className="text-sm font-semibold">{r.totalPrice != null ? `${r.totalPrice}₺` : '—'}</span>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-neutral-500">
+                    <span>{r.deliveryType === 'immediate' ? 'immediate' : 'scheduled'}</span>
+                    <span>•</span>
+                    <span>{r.carrierType} / {r.vehicleType}</span>
+                    <span>•</span>
+                    <span>{r.paymentMethod ?? '—'}</span>
+                    <span>•</span>
+                    <span>{fmtDT(r.createdAt)}</span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      onClick={() => showRoute(r)}
+                      className="rounded-md bg-sky-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-sky-700"
+                    >
+                      Haritada Göster
+                    </button>
+                    <button
+                      onClick={() => openEdit(r)}
+                      className="rounded-md bg-green-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-green-600"
+                      disabled={busyId === r.id}
+                    >
+                      Düzenle
+                    </button>
+                    <button
+                      onClick={() => handleDelete(r.id)}
+                      className="rounded-md bg-red-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-600 disabled:opacity-60"
+                      disabled={busyId === r.id}
+                    >
+                      Sil
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+        </div>
       </section>
 
       {/* Edit Modal */}
@@ -320,7 +385,7 @@ export default function DealerLogisticsTrackingPage() {
 
       {/* Route Modal */}
       {routeOpen && routeFor && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4" onClick={() => setRouteOpen(false)}>
+        <div className="fixed inset-0 z-[200] grid place-items-center bg-black/50 p-4" onClick={() => setRouteOpen(false)}>
           <div className="w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between border-b px-5 py-4">
               <h3 className="text-lg font-semibold">
@@ -335,7 +400,7 @@ export default function DealerLogisticsTrackingPage() {
 
             {!routeLoading && !routeErr && start && end && (
               <div className="p-4">
-                <div style={{ height: 420 }} className="rounded-xl overflow-hidden">
+                <div style={{ height: 420 }} className="relative z-[120] rounded-xl overflow-hidden">
                   <RouteMap start={start} end={end} />
                 </div>
               </div>
@@ -356,14 +421,14 @@ function EditJobModal({
   function submit(e: React.FormEvent) { e.preventDefault(); onSave(model); }
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4">
-      <div className="w-full max-w-3xl rounded-2xl bg-white shadow-xl">
-        <div className="flex items-center justify-between border-b px-5 py-4">
-          <h3 className="text-lg font-semibold">Yükü Düzenle</h3>
-          <button onClick={onClose} className="rounded-full p-2 hover:bg-neutral-100">✕</button>
+    <div className="fixed inset-0 z-[200] grid place-items-center bg-black/50 p-3 sm:p-4 overflow-y-auto">
+      <div className="w-full max-w-3xl max-h-[90vh] flex flex-col rounded-2xl bg-white shadow-xl my-4">
+        <div className="flex items-center justify-between border-b px-4 sm:px-5 py-3 sm:py-4 shrink-0">
+          <h3 className="text-base sm:text-lg font-semibold truncate pr-2">Yükü Düzenle</h3>
+          <button onClick={onClose} className="rounded-full p-2 hover:bg-neutral-100 shrink-0" aria-label="Kapat">✕</button>
         </div>
-        <form onSubmit={submit} className="space-y-4 p-5">
-          <div className="grid gap-4 md:grid-cols-2">
+        <form onSubmit={submit} className="flex-1 min-h-0 overflow-y-auto space-y-4 p-4 sm:p-5">
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
             <div>
               <label className="mb-1 block text-sm font-medium">Teslim Tipi</label>
               <select value={model.deliveryType} onChange={(e) => set('deliveryType', e.target.value as any)} className="w-full rounded-xl border border-neutral-300 px-3 py-2">
@@ -435,12 +500,12 @@ function EditJobModal({
             />
           </div>
 
-          <div className="mt-2 flex items-center justify-end gap-3">
-            <button type="submit" className="rounded-xl bg-emerald-500 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-600">
-              Kaydet
-            </button>
-            <button type="button" onClick={onClose} className="rounded-xl bg-neutral-100 px-5 py-2 text-sm hover:bg-neutral-200">
+          <div className="mt-2 flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 pt-2">
+            <button type="button" onClick={onClose} className="w-full sm:w-auto rounded-xl bg-neutral-100 px-5 py-2.5 text-sm font-medium hover:bg-neutral-200">
               İptal
+            </button>
+            <button type="submit" className="w-full sm:w-auto rounded-xl bg-emerald-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-emerald-600">
+              Kaydet
             </button>
           </div>
         </form>

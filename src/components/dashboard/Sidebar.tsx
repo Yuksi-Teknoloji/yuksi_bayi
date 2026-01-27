@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { usePathname, useParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 import type { NavGroup } from "@/src/types/roles";
 import { ChevronRight } from "lucide-react";
@@ -13,22 +13,37 @@ const ROLE_TITLES: Record<string, string> = {
   marketing: "Pazarlama",
 };
 
-export default function Sidebar({ nav = [] as NavGroup[] }: { nav?: NavGroup[] }) {
+export default function Sidebar({
+  nav = [] as NavGroup[],
+  role,
+  open = true,
+  onClose,
+}: {
+  nav?: NavGroup[];
+  role?: string;
+  open?: boolean;
+  onClose?: () => void;
+}) {
   const pathname = usePathname();
 
-  const [open, setOpen] = useState<Record<string, boolean>>(
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(
     () => Object.fromEntries(nav.map((g) => [g.title, true])) as Record<string, boolean>
   );
 
   return (
-    <aside className="sticky top-0 h-dvh w-72 shrink-0 bg-white border-r border-neutral-200 flex flex-col overflow-hidden">
+    <aside
+      aria-hidden={!open}
+      className={`fixed left-0 top-0 z-[100] h-dvh w-72 shrink-0 bg-white border-r border-neutral-200 flex flex-col overflow-hidden transition-transform duration-200 ease-out ${
+        open ? "translate-x-0" : "-translate-x-full"
+      }`}
+    >
        {/* Header */}
       <div className="px-5 pt-6 pb-4">
         <div className="flex items-center gap-2 h-8 overflow-visible">
           <img
             src="/Brand/yuksi.png"
             alt="Yüksi"
-            className="h-28 w-[120px] object-containshrink-0 select-none"
+            className="h-28 w-[120px] object-contain shrink-0 select-none"
             draggable={false}
           />
           <div className="text-lg font-semibold text-orange-600">Bayi Panel</div>
@@ -38,11 +53,11 @@ export default function Sidebar({ nav = [] as NavGroup[] }: { nav?: NavGroup[] }
       {/* Scrollable area */}
       <nav className="flex-1 overflow-y-auto px-3 pb-6 space-y-4 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-neutral-300/60 [&::-webkit-scrollbar-thumb]:rounded [&::-webkit-scrollbar-track]:bg-transparent">
         {nav.map((group) => {
-          const isOpen = open[group.title] ?? true;
+          const isOpen = openGroups[group.title] ?? true;
           return (
             <div key={group.title} className="rounded-2xl">
               <button
-                onClick={() => setOpen((s) => ({ ...s, [group.title]: !isOpen }))}
+                onClick={() => setOpenGroups((s) => ({ ...s, [group.title]: !isOpen }))}
                 className="w-full flex items-center justify-between rounded-xl px-4 py-3 bg-orange-50 text-orange-700 hover:bg-orange-100 transition"
               >
                 <span className="text-sm font-semibold">{group.title}</span>
@@ -59,6 +74,11 @@ export default function Sidebar({ nav = [] as NavGroup[] }: { nav?: NavGroup[] }
                     <li key={it.href}>
                       <Link
                         href={href}
+                        onClick={() => {
+                          if (typeof window !== "undefined" && window.innerWidth < 768) {
+                            onClose?.();
+                          }
+                        }}
                         className={[
                           "flex items-center justify-between rounded-xl px-4 py-3 transition",
                           active ? "bg-orange-500 text-white shadow-sm" : "text-orange-600 hover:bg-orange-50",

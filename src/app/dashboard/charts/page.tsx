@@ -211,11 +211,12 @@ export default function Charts() {
   }
 
   return (
-    <div className="flex flex-wrap justify-between gap-16">
-      <div className="w-full max-w-[500px] h-[300px] bg-white rounded-md shadow">
-        <div className="flex justify-between items-center p-3">
+    <div className="p-4 sm:p-6 flex flex-col sm:flex-row flex-wrap gap-4 sm:gap-8 lg:gap-16">
+      {/* Sipariş Gelirleri (LineChart) */}
+      <div className="w-full max-w-[500px] min-w-0 flex flex-col min-h-[320px] bg-white rounded-md shadow">
+        <div className="flex flex-wrap items-center gap-2 p-3 shrink-0">
           <select
-            className="rounded border border-neutral-300 bg-white px-3 py-2 outline-none ring-2 ring-transparent transition focus:ring-sky-200"
+            className="rounded border border-neutral-300 bg-white px-3 py-2 text-sm outline-none ring-2 ring-transparent transition focus:ring-sky-200 min-w-0"
             value={rangeOption}
             onChange={(e) => setRangeOption(e.target.value)}
           >
@@ -223,9 +224,8 @@ export default function Charts() {
             <option value="weekly">Haftalık</option>
             <option value="monthly">Aylık</option>
           </select>
-
           <select
-            className="rounded border border-neutral-300 bg-white px-3 py-2 outline-none ring-2 ring-transparent transition focus:ring-sky-200"
+            className="rounded border border-neutral-300 bg-white px-3 py-2 text-sm outline-none ring-2 ring-transparent transition focus:ring-sky-200 min-w-0 flex-1 sm:flex-initial"
             value={option2 ?? ""}
             onChange={(e) => setOption2(e.target.value)}
           >
@@ -235,26 +235,26 @@ export default function Charts() {
               </option>
             ))}
           </select>
-
-          <span className="text-sm font-semibold">Sipariş Gelirleri</span>
-
-          <span className="bg-gray-100 px-2 py-1 text-sm font-semibold rounded">
+          <span className="text-sm font-semibold shrink-0">Sipariş Gelirleri</span>
+          <span className="bg-gray-100 px-2 py-1 text-sm font-semibold rounded shrink-0">
             Toplam: {dataWithRange?.total_amount || 0} &#8378;
           </span>
         </div>
-
-        <ChartLine
-          startDate={startDate}
-          endDate={endDate}
-          option={rangeOption}
-          data={dataWithRange}
-        />
+        <div className="flex-1 min-h-[200px] px-1 pb-2">
+          <ChartLine
+            startDate={startDate}
+            endDate={endDate}
+            option={rangeOption}
+            data={dataWithRange}
+          />
+        </div>
       </div>
 
-      <div className="w-full max-w-[500px] h-[300px] bg-white rounded-md shadow">
-        <div className="flex justify-between items-center p-3">
+      {/* Sipariş Durumu (PieChart) */}
+      <div className="w-full max-w-[500px] min-w-0 flex flex-col bg-white rounded-md shadow">
+        <div className="flex flex-wrap items-center gap-2 p-3 shrink-0">
           <select
-            className="rounded border border-neutral-300 bg-white px-3 py-2 outline-none ring-2 ring-transparent transition focus:ring-sky-200"
+            className="rounded border border-neutral-300 bg-white px-3 py-2 text-sm outline-none ring-2 ring-transparent transition focus:ring-sky-200 min-w-0 flex-1 sm:flex-initial"
             value={option ?? ""}
             onChange={(e) => setOption(e.target.value)}
           >
@@ -264,26 +264,27 @@ export default function Charts() {
               </option>
             ))}
           </select>
-
-          <span className="text-sm font-semibold">Sipariş Durumu</span>
-
-          <span className="bg-gray-100 px-2 py-1 text-sm font-semibold rounded">
+          <span className="text-sm font-semibold shrink-0">Sipariş Durumu</span>
+          <span className="bg-gray-100 px-2 py-1 text-sm font-semibold rounded shrink-0">
             Sipariş Sayısı: {orders.length}
           </span>
         </div>
-
-        <ChartPie data={orders} title="Sipariş Dağılımı" />
+        <div className="shrink-0">
+          <ChartPie data={orders} title="Sipariş Dağılımı" />
+        </div>
       </div>
 
-      <div className="w-full max-w-[500px] h-[300px] bg-white rounded-md shadow overflow-auto">
-        <div className="flex justify-between items-center p-3">
-            <span className="text-sm font-semibold">Bayi Komisyonları</span>
-            <span className="bg-gray-100 px-2 py-1 text-sm fonst-semibold rounded">
-                Toplam: {data.reduce((sum, job) => sum + (job.totalPrice! * (job.commissionRate! / 100) || 0), 0).toFixed(2)}₺
-            </span> 
+      {/* Bayi Komisyonları (BarChart) */}
+      <div className="w-full max-w-[500px] min-w-0 flex flex-col min-h-[320px] bg-white rounded-md shadow">
+        <div className="flex flex-wrap items-center gap-2 p-3 shrink-0">
+          <span className="text-sm font-semibold">Bayi Komisyonları</span>
+          <span className="bg-gray-100 px-2 py-1 text-sm font-semibold rounded">
+            Toplam: {data.reduce((sum, job) => sum + (job.totalPrice! * (job.commissionRate! / 100) || 0), 0).toFixed(2)}₺
+          </span>
         </div>
-        
-        <ChartBar data={data}></ChartBar>
+        <div className="flex-1 min-h-[200px] px-2 pb-2">
+          <ChartBar data={data} />
+        </div>
       </div>
     </div>
   );
